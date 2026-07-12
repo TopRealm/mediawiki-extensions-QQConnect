@@ -82,61 +82,43 @@ class HookHandler {
 		// The button field key is the QQLoginAuthenticationRequest button name.
 		$key = QQLoginAuthenticationRequest::BUTTON_NAME;
 		if ( isset( $formDescriptor[$key] ) ) {
-			// Place the QQ button below the standard fields, with a marker
-			// class so the CSS module can style it (QQ-blue).
+			// Use Codex button classes (cdx-button) so the button matches the
+			// standard "Log in" button in size, alignment, and shape on Citizen,
+			// Vector 2022, and any skin using CodexHTMLForm. The custom
+			// qqconnect-login-button class allows CSS to override the brand
+			// color without touching sizing/layout.
 			$formDescriptor[$key]['weight'] = 101;
-			$formDescriptor[$key]['cssclass'] = 'qqconnect-login-button mw-ui-button mw-ui-progressive';
+			$formDescriptor[$key]['cssclass'] = 'qqconnect-login-button cdx-button cdx-button--action-progressive cdx-button--weight-primary';
 			$formDescriptor[$key]['buttonlabel-message'] = 'qqconnect-login-button';
 		}
 	}
 
 	/**
-	 * Inject QQ login / management links into the personal menu.
+	 * Load the extension stylesheet on pages where the QQ login button or
+	 * management UI may appear (login form, special pages).
 	 *
-	 * This hook replaces the removed PersonalUrls hook in MW 1.43 and works for
-	 * Citizen, Vector, and Timeless, which all render the standard
-	 * data-user-menu portlet.
+	 * This hook replaces the removed PersonalUrls hook in MW 1.43. We use it
+	 * only to ensure the CSS module is loaded; no personal-menu entries are
+	 * added so as not to clutter the user dropdown.
 	 *
 	 * @param SkinTemplate $sktemplate
 	 * @param array &$links
 	 */
 	public function onSkinTemplateNavigation__Universal( $sktemplate, &$links ): void {
-		$user = $sktemplate->getUser();
-		$out = $sktemplate->getOutput();
-
-		// Always load the styling so the QQ button/link looks right.
-		$out->addModuleStyles( 'ext.QQConnect.styles' );
-
-		if ( $user->isRegistered() ) {
-			// Logged in: add a "QQ" management link to the user menu.
-			$binding = $this->store->findBindingByUser( $user->getId() );
-			if ( $binding ) {
-				$text = $sktemplate->msg( 'qqconnect-personal-manage' )->text();
-			} else {
-				$text = $sktemplate->msg( 'qqconnect-personal-bind' )->text();
-			}
-			$links['user-menu']['qqconnect'] = [
-				'text' => $text,
-				'href' => SpecialPage::getTitleFor( 'QQConnect' )->getLocalURL(),
-				'active' => false,
-				'icon' => 'userAvatar',
-			];
-		} else {
-			// Anonymous: add a "QQ Login" link so the button is visible in the
-			// personal area too (helps QQ review, complements the login-form
-			// button). In test mode this leads to the test notice.
-			$loginUrl = SpecialPage::getTitleFor( 'QQConnectLogin' )->getLocalURL();
-			$links['user-menu']['qqconnect-login'] = [
-				'text' => $sktemplate->msg( 'qqconnect-personal-qqlogin' )->text(),
-				'href' => $loginUrl,
-				'active' => false,
-				'icon' => 'logIn',
-			];
-		}
+		// Load styles when the QQ button might render (login form) or when
+		// on our own special pages (those pages also load styles themselves,
+		// but this covers the login page).
+		$sktemplate->getOutput()->addModuleStyles( 'ext.QQConnect.styles' );
 	}
 
 	/**
-	 * Add a "QQ Connect" section to user preferences.
+	 * Add QQ Connect binding status to the "User profile" preferences tab.
+	 *
+	 * Uses the sub-section key 'personal/qqconnect' so the binding status and
+	 * management link appear as a compact group INSIDE the existing "User
+	 * profile" tab rather than creating a separate top-level tab.
+	 *
+	 * The sub-section heading is the i18n message prefs-qqconnect.
 	 *
 	 * @param User $user
 	 * @param array &$preferences
@@ -144,31 +126,20 @@ class HookHandler {
 	public function onGetPreferences( $user, &$preferences ) {
 		$binding = $this->store->findBindingByUser( $user->getId() );
 
-		// Section tab.
-		$preferences['qqconnect-section'] = [
-			'type' => 'info',
-			'raw' => true,
-			'default' => '',
-			'label-message' => 'qqconnect-prefs-section',
-			'section' => 'qqconnect/info',
-		];
-
 		if ( $binding ) {
 			$nickname = $binding['qqc_nickname'] ?? $binding['qqc_openid'];
 			$preferences['qqconnect-bound'] = [
 				'type' => 'info',
-				'raw' => false,
-				'default' => $this->formatBound( $nickname ),
 				'label-message' => 'qqconnect-prefs-bound',
-				'section' => 'qqconnect/info',
+				'default' => $this->formatBound( $nickname ),
+				'section' => 'personal/qqconnect',
 			];
 		} else {
 			$preferences['qqconnect-bound'] = [
 				'type' => 'info',
-				'raw' => false,
-				'default' => $this->msg( 'qqconnect-prefs-not-bound' )->text(),
 				'label-message' => 'qqconnect-prefs-bound',
-				'section' => 'qqconnect/info',
+				'default' => $this->msg( 'qqconnect-prefs-not-bound' )->text(),
+				'section' => 'personal/qqconnect',
 			];
 		}
 
@@ -177,10 +148,10 @@ class HookHandler {
 		$preferences['qqconnect-manage-link'] = [
 			'type' => 'info',
 			'raw' => true,
+			'label-message' => 'qqconnect-prefs-section-desc',
 			'default' => '<a href="' . htmlspecialchars( $manageUrl ) . '">'
 				. $this->msg( 'qqconnect-prefs-manage' )->escaped() . '</a>',
-			'label-message' => 'qqconnect-prefs-section-desc',
-			'section' => 'qqconnect/info',
+			'section' => 'personal/qqconnect',
 		];
 	}
 

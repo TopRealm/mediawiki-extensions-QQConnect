@@ -1,42 +1,30 @@
 /**
  * QQConnect extension styles.
  *
- * Styles the QQ login button (on the login form and in the personal menu),
- * the management page layout, and the admin table. Written with skin-agnostic
- * selectors so it works across Citizen, Vector, and Timeless. The QQ brand
- * blue (#12B7F5) is used as the accent color.
+ * The login button uses Codex classes (cdx-button cdx-button--action-progressive
+ * cdx-button--weight-primary) so that sizing, alignment, border-radius, and
+ * typography match the standard "Log in" button across Citizen, Vector 2022,
+ * and any skin using the Codex form system in MW 1.43+.
+ *
+ * This stylesheet only overrides the brand colour (QQ blue #12b7f5) and
+ * provides layout helpers for the management/admin/choose pages.
  */
 
-/* ---- Login form button ---- */
-.qqconnect-login-button,
-.ext-qqconnect-login-button {
+/* ---- Login form button (Codex-based) ---- */
+.qqconnect-login-button.cdx-button--action-progressive.cdx-button--weight-primary {
 	background-color: #12b7f5;
 	border-color: #12b7f5;
 	color: #fff;
-	font-weight: bold;
 }
 
-.qqconnect-login-button:hover,
-.ext-qqconnect-login-button:hover {
+.qqconnect-login-button.cdx-button--action-progressive.cdx-button--weight-primary:hover {
 	background-color: #0ea3e0;
 	border-color: #0ea3e0;
 }
 
-/* A small QQ glyph before the button label. Added via ::before so no extra
-   HTML is needed. Uses a CSS-drawn QQ-like badge to avoid shipping an image. */
-.qqconnect-login-button::before {
-	content: "QQ";
-	display: inline-block;
-	margin-right: 0.4em;
-	font-size: 0.85em;
-	opacity: 0.9;
-}
-
-/* ---- Personal menu links (Citizen / Vector / Timeless) ---- */
-#pt-qqconnect a,
-#pt-qqconnect-login a,
-li[id^="pt-qqconnect"] a {
-	color: #12b7f5;
+.qqconnect-login-button.cdx-button--action-progressive.cdx-button--weight-primary:active {
+	background-color: #0b8ec9;
+	border-color: #0b8ec9;
 }
 
 /* ---- Management page (Special:QQConnect) ---- */
@@ -81,53 +69,23 @@ li[id^="pt-qqconnect"] a {
 }
 
 /* ---- Choose page ---- */
-.qqconnect-btn-create,
-.qqconnect-btn-link {
-	display: block;
-	margin: 0.5em 0;
+.qqconnect-choose {
+	margin: 1em 0;
 }
 
-/* ---- Citizen skin specifics ---- */
-/* Citizen renders the user menu as a dropdown; ensure the QQ entry aligns. */
-.skin-citizen .citizen-userMenu li[id^="pt-qqconnect"] a {
-	display: flex;
-	align-items: center;
-	gap: 0.4em;
+.qqconnect-choose-option {
+	margin: 1em 0;
+	padding: 0.8em 1em;
+	border: 1px solid var(--border-color-base, #c8ccd1);
+	border-radius: var(--border-radius-base, 2px);
 }
 
-.skin-citizen .citizen-userMenu li[id^="pt-qqconnect"] a::before {
-	content: "";
-	display: inline-block;
-	width: 0.6em;
-	height: 0.6em;
-	border-radius: 50%;
-	background-color: #12b7f5;
+.qqconnect-choose-option .qqconnect-choose-desc {
+	margin: 0.4em 0 0 0;
+	color: var(--color-subtle, #54595d);
+	font-size: 0.9em;
 }
 
-/* ---- Vector skin specifics ---- */
-/* Vector's personal tools dropdown; keep the icon spacing consistent. */
-.skin-vector li[id^="pt-qqconnect"] a {
-	padding-left: 1.5em;
-	position: relative;
-}
-
-.skin-vector li[id^="pt-qqconnect"] a::before {
-	content: "";
-	position: absolute;
-	left: 0.4em;
-	top: 50%;
-	transform: translateY(-50%);
-	width: 0.6em;
-	height: 0.6em;
-	border-radius: 50%;
-	background-color: #12b7f5;
-}
-
-/* ---- Timeless skin specifics ---- */
-.skin-timeless li[id^="pt-qqconnect"] a {
-	color: #12b7f5;
-}
-
-.skin-timeless li[id^="pt-qqconnect"] a:hover {
-	text-decoration: underline;
+.qqconnect-choose-nickname {
+	margin: 0.5em 0 1em;
 }
