@@ -60,17 +60,17 @@ class QQPrimaryAuthenticationProvider extends AbstractPrimaryAuthenticationProvi
 	public const SESSION_KEY_RESULT = 'QQConnect:result';
 
 	/** @var QQConnectConfig */
-	private $config;
+	private $qqConfig;
 
 	/** @var QQStore */
-	private $store;
+	private $qqStore;
 
 	public function __construct(
 		QQConnectConfig $config,
 		QQStore $store
 	) {
-		$this->config = $config;
-		$this->store = $store;
+		$this->qqConfig = $config;
+		$this->qqStore = $store;
 		$this->logger = LoggerFactory::getInstance( 'qqconnect' );
 	}
 
@@ -216,7 +216,7 @@ class QQPrimaryAuthenticationProvider extends AbstractPrimaryAuthenticationProvi
 		if ( !$u ) {
 			return false;
 		}
-		return $this->store->userIsBound( $u->getId() );
+		return $this->qqStore->userIsBound( $u->getId() );
 	}
 
 	/**
@@ -234,7 +234,7 @@ class QQPrimaryAuthenticationProvider extends AbstractPrimaryAuthenticationProvi
 	 * @return string
 	 */
 	private function getRedirectUri(): string {
-		$configured = $this->config->getRedirectUri();
+		$configured = $this->qqConfig->getRedirectUri();
 		if ( $configured ) {
 			return $configured;
 		}
@@ -250,7 +250,7 @@ class QQPrimaryAuthenticationProvider extends AbstractPrimaryAuthenticationProvi
 	public function providerRevokeAccessForUser( $username ) {
 		$u = User::newFromName( $username );
 		if ( $u && $u->getId() ) {
-			$this->store->unbind( $u->getId() );
+			$this->qqStore->unbind( $u->getId() );
 		}
 	}
 

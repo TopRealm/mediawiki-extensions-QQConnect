@@ -18,7 +18,6 @@ use HTMLForm;
 use MediaWiki\Extension\QQConnect\QQConnectConfig;
 use MediaWiki\Extension\QQConnect\QQStore;
 use MediaWiki\SpecialPage\SpecialPage;
-use MediaWiki\User\UserFactory;
 use PermissionsError;
 use StatusValue;
 
@@ -29,9 +28,6 @@ class SpecialQQConnectAdmin extends SpecialPage {
 
 	/** @var QQStore */
 	private $store;
-
-	/** @var UserFactory */
-	private $userFactory;
 
 	public function __construct(
 		QQConnectConfig $config,
