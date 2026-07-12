@@ -81,7 +81,7 @@ $wgQQConnectTestMode = false;
 
 **豁免规则**:
 - 匿名用户不限制(匿名用户本就受其他权限限制)。
-- 拥有 `qqconnect-manage` 权限的用户(bureaucrat、sysop)豁免。
+- 拥有 `qqconnect-manage` 权限的用户豁免(该权限默认不授予任何组,需手动配置,详见[权限配置](#权限配置))。
 
 ```php
 $wgQQConnectRequireBind = true;
@@ -131,15 +131,20 @@ $wgQQConnectTestMode = false;
 
 ## 权限配置
 
-扩展注册了 `qqconnect-manage` 权限,默认授予 bureaucrat 和 sysop 组。如需自定义:
+扩展注册了 `qqconnect-manage` 权限,但**不在 `extension.json` 中预定义任何用户组的授予**——该权限默认不授予任何组。站点管理员需在 `LocalSettings.php` 中(`wfLoadExtension( 'QQConnect' );` 之后)手动将其分配给所需的用户组:
 
 ```php
-// 额外授予某用户组管理权限
-$wgGroupPermissions['moderator']['qqconnect-manage'] = true;
+// 授予 sysop(管理员)组管理权限
+$wgGroupPermissions['sysop']['qqconnect-manage'] = true;
 
-// 撤销 sysop 的管理权限
-$wgGroupPermissions['sysop']['qqconnect-manage'] = false;
+// 授予 bureaucrat(行政员)组管理权限
+$wgGroupPermissions['bureaucrat']['qqconnect-manage'] = true;
+
+// 或授予自定义用户组
+$wgGroupPermissions['moderator']['qqconnect-manage'] = true;
 ```
+
+> **提示**:未分配此权限的站点,`Special:QQConnectAdmin` 页面将无人可访问(页面本身仍受权限保护,普通用户访问会被拒绝)。
 
 ---
 

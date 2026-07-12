@@ -109,10 +109,12 @@ https://你的网站域名/wiki/Special:QQConnectLogin
 
 ### 管理员操作
 
-拥有 `qqconnect-manage` 权限的用户(默认 bureaucrat 和 sysop 组)可访问 `Special:QQConnectAdmin`:
+拥有 `qqconnect-manage` 权限的用户可访问 `Special:QQConnectAdmin`:
 - 查看所有用户的 QQ 绑定列表。
 - 按用户名搜索。
 - 强制解绑任意用户的 QQ(仅删除绑定关系,不影响 MediaWiki 账号本身)。
+
+> **注意**:本扩展**不预定义任何用户组的权限授予**。`qqconnect-manage` 权限默认不授予任何组,站点管理员需在 `LocalSettings.php` 中手动分配(详见[权限配置](#权限))。
 
 ## 安全设计说明
 
@@ -152,9 +154,26 @@ QQ 登录按钮通过 `ButtonAuthenticationRequest` 注入登录表单,在所有
 
 ## 权限
 
+本扩展注册了 `qqconnect-manage` 权限,但**不在 `extension.json` 中预定义任何用户组的权限授予**。该权限默认不授予任何组,需由站点管理员手动分配。
+
 | 权限 | 默认授予 | 说明 |
 |---|---|---|
-| `qqconnect-manage` | bureaucrat, sysop | 管理其他用户的 QQ 绑定(访问 Special:QQConnectAdmin) |
+| `qqconnect-manage` | 无(需手动配置) | 管理其他用户的 QQ 绑定(访问 Special:QQConnectAdmin) |
+
+### 权限配置示例
+
+在 `LocalSettings.php` 中(`wfLoadExtension( 'QQConnect' );` 之后)按需分配:
+
+```php
+// 授予 sysop(管理员)组管理权限
+$wgGroupPermissions['sysop']['qqconnect-manage'] = true;
+
+// 授予 bureaucrat(行政员)组管理权限
+$wgGroupPermissions['bureaucrat']['qqconnect-manage'] = true;
+
+// 或授予自定义用户组
+$wgGroupPermissions['qqconnect-manager']['qqconnect-manage'] = true;
+```
 
 ## 特殊页面
 
