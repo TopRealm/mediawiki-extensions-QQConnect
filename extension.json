@@ -1,0 +1,156 @@
+{
+	"manifest_version": 2,
+	"name": "QQConnect",
+	"namemsg": "qqconnect-desc-name",
+	"type": "other",
+	"author": [
+		"QQConnect Contributors"
+	],
+	"version": "1.0.0",
+	"url": "https://www.mediawiki.org/wiki/Extension:QQConnect",
+	"descriptionmsg": "qqconnect-desc",
+	"license-name": "GPL-2.0-or-later",
+	"requires": {
+		"MediaWiki": ">= 1.43.0",
+		"platform": {
+			"php": ">= 8.1",
+			"ext-curl": "*",
+			"ext-json": "*",
+			"ext-mbstring": "*"
+		}
+	},
+	"AutoloadNamespaces": {
+		"MediaWiki\\Extension\\QQConnect\\": "includes/"
+	},
+	"config_prefix": "wg",
+	"config": {
+		"QQConnectAppId": {
+			"value": "",
+			"description": "QQ Connect APPID (应用ID). Obtain from https://connect.qq.com/ after registering a website application.",
+			"descriptionmsg": "qqconnect-config-appid-desc",
+			"public": true
+		},
+		"QQConnectAppKey": {
+			"value": "",
+			"description": "QQ Connect APP KEY (应用密钥/secret). Keep private.",
+			"descriptionmsg": "qqconnect-config-appkey-desc",
+			"public": false
+		},
+		"QQConnectRedirectUri": {
+			"value": null,
+			"description": "OAuth callback URI. If null, the extension auto-generates Special:QQConnectLogin/callback full URL. Must match a registered callback domain at connect.qq.com.",
+			"descriptionmsg": "qqconnect-config-redirect-desc",
+			"public": true
+		},
+		"QQConnectTestMode": {
+			"value": true,
+			"description": "Placeholder test mode. When true, the QQ login button is visible and clickable but shows a test notice page instead of performing real OAuth. This is required by QQ Connect to pass app review (the button must be visible before review). Set to false once your appid is approved and you want to go live.",
+			"descriptionmsg": "qqconnect-config-testmode-desc",
+			"public": true
+		},
+		"QQConnectRequireBind": {
+			"value": false,
+			"description": "When true, users must have a QQ bound to their account in order to edit pages. Login itself is still allowed.",
+			"descriptionmsg": "qqconnect-config-requirebind-desc",
+			"public": true
+		},
+		"QQConnectScopes": {
+			"value": "get_user_info",
+			"description": "Comma-separated list of QQ Connect API scopes to request.",
+			"descriptionmsg": "qqconnect-config-scopes-desc",
+			"public": true
+		}
+	},
+	"SpecialPages": {
+		"QQConnectLogin": {
+			"class": "MediaWiki\\Extension\\QQConnect\\Special\\SpecialQQConnectLogin",
+			"services": [
+				"QQConnect.Config",
+				"QQConnect.Client",
+				"QQConnect.Store"
+			]
+		},
+		"QQConnect": {
+			"class": "MediaWiki\\Extension\\QQConnect\\Special\\SpecialQQConnect",
+			"services": [
+				"QQConnect.Config",
+				"QQConnect.Client",
+				"QQConnect.Store"
+			]
+		},
+		"QQConnectAdmin": {
+			"class": "MediaWiki\\Extension\\QQConnect\\Special\\SpecialQQConnectAdmin",
+			"services": [
+				"QQConnect.Config",
+				"QQConnect.Store"
+			]
+		}
+	},
+	"HookHandlers": {
+		"main": {
+			"class": "MediaWiki\\Extension\\QQConnect\\HookHandler",
+			"services": [
+				"QQConnect.Config",
+				"QQConnect.Store",
+				"UserFactory"
+			]
+		},
+		"schema": {
+			"class": "MediaWiki\\Extension\\QQConnect\\SchemaHooks"
+		}
+	},
+	"Hooks": {
+		"AuthChangeFormFields": "main",
+		"SkinTemplateNavigation::Universal": "main",
+		"GetPreferences": "main",
+		"LocalUserCreated": "main",
+		"getUserPermissionsErrors": "main",
+		"LoadExtensionSchemaUpdates": "schema"
+	},
+	"AuthManagerAutoConfig": {
+		"primaryauth": {
+			"QQConnectPrimaryAuthenticationProvider": {
+				"class": "MediaWiki\\Extension\\QQConnect\\Auth\\QQPrimaryAuthenticationProvider",
+				"services": [
+					"QQConnect.Config",
+					"QQConnect.Store"
+				],
+				"sort": 0
+			}
+		}
+	},
+	"ServiceWiringFiles": [
+		"includes/ServiceWiring.php"
+	],
+	"MessagesDirs": {
+		"QQConnect": [
+			"i18n"
+		]
+	},
+	"ResourceModules": {
+		"ext.QQConnect.styles": {
+			"styles": "qqconnect.css",
+			"localBasePath": "resources",
+			"remoteExtPath": "QQConnect/resources"
+		},
+		"ext.QQConnect.scripts": {
+			"scripts": "qqconnect.js",
+			"localBasePath": "resources",
+			"remoteExtPath": "QQConnect/resources"
+		}
+	},
+	"AvailableRights": [
+		"qqconnect-manage"
+	],
+	"GroupPermissions": {
+		"bureaucrat": {
+			"qqconnect-manage": true
+		},
+		"sysop": {
+			"qqconnect-manage": true
+		}
+	},
+	"ExtensionFunctions": [
+		"MediaWiki\\Extension\\QQConnect\\HookHandler::onExtensionFunction"
+	]
+}

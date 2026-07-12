@@ -1,0 +1,112 @@
+{
+	"@metadata": {
+		"authors": [
+			"QQConnect Contributors"
+		],
+		"language": "en"
+	},
+	"qqconnect-desc-name": "QQConnect",
+	"qqconnect-desc": "Allow users to log in to MediaWiki using a QQ account via QQ Connect (QQ互联) OAuth2.",
+
+	"qqconnect-config-appid-desc": "QQ Connect APPID (application ID).",
+	"qqconnect-config-appkey-desc": "QQ Connect APP KEY (application secret).",
+	"qqconnect-config-redirect-desc": "OAuth callback URI.",
+	"qqconnect-config-testmode-desc": "Placeholder test mode toggle.",
+	"qqconnect-config-requirebind-desc": "Require QQ binding to edit.",
+	"qqconnect-config-scopes-desc": "Comma-separated QQ Connect API scopes.",
+
+	"qqconnect-login-button": "Log in with QQ",
+	"qqconnect-loginbutton-help": "Log in using your QQ account",
+	"qqconnect-login": "QQ Login",
+	"qqconnect-login-link": "Log in with QQ",
+
+	"qqconnect-special-login-title": "QQ Login",
+	"qqconnect-special-login-callback": "QQ Login",
+	"qqconnect-special-login-intro": "You are logging in with your QQ account.",
+
+	"qqconnect-test-mode-title": "QQ Login (Test Mode)",
+	"qqconnect-test-mode-body": "QQ Connect login is currently in '''test mode'''.\n\nThe login button is shown so that the QQ Connect platform can review your application, but actual QQ login is not enabled yet.\n\nA site administrator must configure the APP ID and APP KEY in <code>LocalSettings.php</code>, and set <code>$wgQQConnectTestMode = false;</code> to enable real QQ login.\n\nSee the [[Special:QQConnect|QQ account management page]] or the extension documentation for details.",
+
+	"qqconnect-error-not-configured": "QQ Connect is not configured. Ask a site administrator to set $wgQQConnectAppId and $wgQQConnectAppKey.",
+	"qqconnect-error-invalid-state": "Invalid or expired login session. Please try logging in with QQ again.",
+	"qqconnect-error-no-code": "No authorization code was received from QQ. Please try again.",
+	"qqconnect-error-token": "Failed to obtain an access token from QQ. Please try again.",
+	"qqconnect-error-openid": "Failed to obtain your QQ OpenID. Please try again.",
+	"qqconnect-error-userinfo": "Failed to retrieve your QQ user information. Please try again.",
+	"qqconnect-error-openid-bound-other": "This QQ account is already bound to another MediaWiki user.",
+	"qqconnect-error-user-bound-other": "Your account is already bound to a different QQ. Use the management page to change it.",
+	"qqconnect-error-bind-failed": "Failed to bind the QQ account. Please try again.",
+	"qqconnect-error-auth-failed": "Authentication failed. Please check your username and password.",
+	"qqconnect-error-already-bound": "This QQ account is already bound to your account.",
+	"qqconnect-error-require-bind": "You must bind a QQ account to your user before you can edit pages. Go to [[Special:QQConnect|your QQ account management page]] to bind.",
+	"qqconnect-error-disabled": "QQ login is currently disabled.",
+
+	"qqconnect-choose-title": "QQ Account Not Bound",
+	"qqconnect-choose-intro": "Your QQ account ($1) is not yet linked to a MediaWiki account. Choose how to continue:",
+	"qqconnect-choose-create": "Create a new MediaWiki account",
+	"qqconnect-choose-create-desc": "Register a new MediaWiki account using the normal registration process. Your QQ will be bound automatically after registration.",
+	"qqconnect-choose-link": "Link to an existing MediaWiki account",
+	"qqconnect-choose-link-desc": "Bind this QQ to an existing MediaWiki account by verifying the account credentials.",
+	"qqconnect-choose-nickname": "QQ nickname: $1",
+
+	"qqconnect-link-form-title": "Link QQ to Existing Account",
+	"qqconnect-link-form-intro": "Enter the credentials of the MediaWiki account you want to bind to QQ account \"$1\".",
+	"qqconnect-link-form-username": "MediaWiki username:",
+	"qqconnect-link-form-password": "Password:",
+	"qqconnect-link-form-submit": "Verify and Bind",
+
+	"qqconnect-special-manage-title": "QQ Account",
+	"qqconnect-special-manage-intro": "Manage the QQ account bound to your MediaWiki account.",
+	"qqconnect-manage-bound": "Your account is bound to the following QQ account:",
+	"qqconnect-manage-not-bound": "Your account is not currently bound to any QQ account.",
+	"qqconnect-manage-bind": "Bind a QQ account",
+	"qqconnect-manage-rebind": "Change the bound QQ account",
+	"qqconnect-manage-unbind": "Unbind QQ account",
+	"qqconnect-manage-bind-success": "Your QQ account has been bound successfully.",
+	"qqconnect-manage-unbind-success": "Your QQ account has been unbound successfully.",
+	"qqconnect-manage-rebind-success": "Your QQ account has been changed successfully.",
+	"qqconnect-manage-confirm-unbind": "Are you sure you want to unbind your QQ account? You will not be able to log in with QQ until you bind again.",
+	"qqconnect-manage-nickname": "Nickname: $1",
+	"qqconnect-manage-openid": "OpenID: $1",
+	"qqconnect-manage-bound-time": "Bound since: $1",
+	"qqconnect-manage-avatar": "Avatar",
+
+	"qqconnect-special-admin-title": "QQ Connect Administration",
+	"qqconnect-special-admin-intro": "View and manage QQ bindings for all users.",
+	"qqconnect-admin-list-user": "User",
+	"qqconnect-admin-list-openid": "QQ OpenID",
+	"qqconnect-admin-list-nickname": "Nickname",
+	"qqconnect-admin-list-bound": "Bound since",
+	"qqconnect-admin-list-actions": "Actions",
+	"qqconnect-admin-unbind": "Unbind",
+	"qqconnect-admin-unbind-confirm": "Force unbind QQ from user \"$1\"?",
+	"qqconnect-admin-unbind-success": "Unbound QQ from user \"$1\".",
+	"qqconnect-admin-nobody": "No QQ bindings found.",
+	"qqconnect-admin-search": "Search by username:",
+	"qqconnect-admin-search-submit": "Search",
+
+	"qqconnect-prefs-section": "QQ Connect",
+	"qqconnect-prefs-section-desc": "Manage your QQ account binding.",
+	"qqconnect-prefs-bound": "Bound to QQ: $1",
+	"qqconnect-prefs-not-bound": "Not bound to a QQ account.",
+	"qqconnect-prefs-manage": "Manage QQ binding",
+
+	"qqconnect-personal-manage": "QQ",
+	"qqconnect-personal-bind": "Bind QQ",
+	"qqconnect-personal-qqlogin": "QQ Login",
+
+	"qqconnect-action-unbind": "Unbind QQ",
+	"qqconnect-action-rebind": "Change QQ",
+	"qqconnect-action-bind": "Bind QQ",
+
+	"qqconnect-right-qqconnect-manage": "Manage other users' QQ bindings",
+
+	"qqconnect-group-user-menu": "User menu",
+
+	"qqconnect-log-name": "QQ Connect log",
+	"qqconnect-log-desc": "Events related to QQ account binding.",
+	"qqconnect-logentry-bind": "bound their MediaWiki account to a QQ account",
+	"qqconnect-logentry-unbind": "unbound their MediaWiki account from a QQ account",
+	"qqconnect-logentry-rebind": "changed the QQ account bound to their MediaWiki account",
+	"qqconnect-logentry-admin-unbind": "force-unbound QQ account from user $1"
+}

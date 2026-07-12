@@ -1,0 +1,111 @@
+{
+	"@metadata": {
+		"authors": [
+			"QQConnect Contributors"
+		]
+	},
+	"qqconnect-desc-name": "The name of the extension.",
+	"qqconnect-desc": "Short description shown on Special:Version.",
+
+	"qqconnect-config-appid-desc": "Description of $wgQQConnectAppId.",
+	"qqconnect-config-appkey-desc": "Description of $wgQQConnectAppKey.",
+	"qqconnect-config-redirect-desc": "Description of $wgQQConnectRedirectUri.",
+	"qqconnect-config-testmode-desc": "Description of $wgQQConnectTestMode.",
+	"qqconnect-config-requirebind-desc": "Description of $wgQQConnectRequireBind.",
+	"qqconnect-config-scopes-desc": "Description of $wgQQConnectScopes.",
+
+	"qqconnect-login-button": "Label of the QQ login button on the login form.",
+	"qqconnect-loginbutton-help": "Help text for the QQ login button.",
+	"qqconnect-login": "Link text for QQ login in personal menu.",
+	"qqconnect-login-link": "Alternative link text for QQ login.",
+
+	"qqconnect-special-login-title": "Title of Special:QQConnectLogin.",
+	"qqconnect-special-login-callback": "Callback title.",
+	"qqconnect-special-login-intro": "Intro shown on the QQ login special page.",
+
+	"qqconnect-test-mode-title": "Title of the test mode notice page.",
+	"qqconnect-test-mode-body": "Body of the test mode notice page.",
+
+	"qqconnect-error-not-configured": "Error shown when APP ID/KEY are not set.",
+	"qqconnect-error-invalid-state": "Error shown when the OAuth state token does not match.",
+	"qqconnect-error-no-code": "Error shown when no authorization code returned.",
+	"qqconnect-error-token": "Error shown when access token request fails.",
+	"qqconnect-error-openid": "Error shown when OpenID request fails.",
+	"qqconnect-error-userinfo": "Error shown when user info request fails.",
+	"qqconnect-error-openid-bound-other": "Error shown when the QQ openid is bound to another user.",
+	"qqconnect-error-user-bound-other": "Error shown when the current user is bound to a different QQ.",
+	"qqconnect-error-bind-failed": "Generic bind failure error.",
+	"qqconnect-error-auth-failed": "Error shown when account linking credentials are invalid.",
+	"qqconnect-error-already-bound": "Error shown when trying to bind an already-bound QQ.",
+	"qqconnect-error-require-bind": "Error shown when RequireBind blocks editing.",
+	"qqconnect-error-disabled": "Error shown when QQ login is disabled.",
+
+	"qqconnect-choose-title": "Title of the choose-create-or-link page.",
+	"qqconnect-choose-intro": "Intro; $1 is the QQ nickname.",
+	"qqconnect-choose-create": "Button: create new account.",
+	"qqconnect-choose-create-desc": "Description of create-new-account option.",
+	"qqconnect-choose-link": "Button: link existing account.",
+	"qqconnect-choose-link-desc": "Description of link-existing-account option.",
+	"qqconnect-choose-nickname": "QQ nickname label; $1 is nickname.",
+
+	"qqconnect-link-form-title": "Title of the link form.",
+	"qqconnect-link-form-intro": "Intro; $1 is the QQ nickname.",
+	"qqconnect-link-form-username": "Form label for username.",
+	"qqconnect-link-form-password": "Form label for password.",
+	"qqconnect-link-form-submit": "Submit button text.",
+
+	"qqconnect-special-manage-title": "Title of Special:QQConnect.",
+	"qqconnect-special-manage-intro": "Intro of management page.",
+	"qqconnect-manage-bound": "Message shown when a QQ is bound.",
+	"qqconnect-manage-not-bound": "Message shown when no QQ is bound.",
+	"qqconnect-manage-bind": "Button: bind.",
+	"qqconnect-manage-rebind": "Button: change bound QQ.",
+	"qqconnect-manage-unbind": "Button: unbind.",
+	"qqconnect-manage-bind-success": "Success message for binding.",
+	"qqconnect-manage-unbind-success": "Success message for unbinding.",
+	"qqconnect-manage-rebind-success": "Success message for rebinding.",
+	"qqconnect-manage-confirm-unbind": "Confirmation prompt for unbinding.",
+	"qqconnect-manage-nickname": "Label; $1 is nickname.",
+	"qqconnect-manage-openid": "Label; $1 is openid.",
+	"qqconnect-manage-bound-time": "Label; $1 is a timestamp.",
+	"qqconnect-manage-avatar": "Label for avatar.",
+
+	"qqconnect-special-admin-title": "Title of Special:QQConnectAdmin.",
+	"qqconnect-special-admin-intro": "Intro of admin page.",
+	"qqconnect-admin-list-user": "Table header.",
+	"qqconnect-admin-list-openid": "Table header.",
+	"qqconnect-admin-list-nickname": "Table header.",
+	"qqconnect-admin-list-bound": "Table header.",
+	"qqconnect-admin-list-actions": "Table header.",
+	"qqconnect-admin-unbind": "Action button text.",
+	"qqconnect-admin-unbind-confirm": "Confirmation prompt; $1 is username.",
+	"qqconnect-admin-unbind-success": "Success message; $1 is username.",
+	"qqconnect-admin-nobody": "Empty-state message.",
+	"qqconnect-admin-search": "Search box label.",
+	"qqconnect-admin-search-submit": "Search button.",
+
+	"qqconnect-prefs-section": "Preferences section tab name.",
+	"qqconnect-prefs-section-desc": "Preferences section description.",
+	"qqconnect-prefs-bound": "Preferences info; $1 is nickname.",
+	"qqconnect-prefs-not-bound": "Preferences info.",
+	"qqconnect-prefs-manage": "Link to management page.",
+
+	"qqconnect-personal-manage": "Personal menu link text.",
+	"qqconnect-personal-bind": "Personal menu link for binding.",
+	"qqconnect-personal-qqlogin": "Personal menu link for QQ login (anon users).",
+
+	"qqconnect-action-unbind": "Action label.",
+	"qqconnect-action-rebind": "Action label.",
+	"qqconnect-action-bind": "Action label.",
+
+	"qqconnect-right-qqconnect-manage": "Right description.",
+
+	"qqconnect-group-user-menu": "Group name for special pages.",
+
+	"qqconnect-log-name": "Log name.",
+	"qqconnect-log-desc": "Log description.",
+	"qqconnect-logentry-bind": "Log entry; user is the subject.",
+	"qqconnect-logentry-unbind": "Log entry; user is the subject.",
+	"qqconnect-logentry-rebind": "Log entry; user is the subject.",
+	"qqconnect-logentry-admin-unbind": "Log entry; $1 is the target user."
+}

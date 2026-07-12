@@ -1,0 +1,76 @@
+[
+	{
+		"name": "qqconnect_users",
+		"comment": "Mapping table between MediaWiki users and QQ Connect OpenIDs. Each MediaWiki user can be bound to at most one QQ account, and each QQ OpenID (per APPID) can be bound to at most one MediaWiki user.",
+		"columns": [
+			{
+				"name": "qqc_user",
+				"comment": "MediaWiki user_id of the bound account.",
+				"type": "integer",
+				"options": {
+					"notnull": true,
+					"unsigned": true,
+					"autoincrement": false
+				}
+			},
+			{
+				"name": "qqc_openid",
+				"comment": "QQ Connect OpenID (per-app unique identifier of the QQ user).",
+				"type": "string",
+				"options": {
+					"notnull": true,
+					"length": 255
+				}
+			},
+			{
+				"name": "qqc_appid",
+				"comment": "QQ Connect APPID that was used when this binding was established. Stored so a future APPID change does not silently repurpose bindings.",
+				"type": "string",
+				"options": {
+					"notnull": true,
+					"length": 255
+				}
+			},
+			{
+				"name": "qqc_nickname",
+				"comment": "QQ nickname at bind time, for display only.",
+				"type": "string",
+				"options": {
+					"notnull": false,
+					"length": 255
+				}
+			},
+			{
+				"name": "qqc_avatar",
+				"comment": "QQ avatar URL at bind time, for display only.",
+				"type": "string",
+				"options": {
+					"notnull": false,
+					"length": 512
+				}
+			},
+			{
+				"name": "qqc_bound_timestamp",
+				"comment": "Timestamp when the binding was created (MediaWiki BINARY(14) format).",
+				"type": "mwtimestamp",
+				"options": {
+					"notnull": true
+				}
+			}
+		],
+		"indexes": [
+			{
+				"name": "qqc_openid_appid",
+				"comment": "Ensures a QQ OpenID/APPID pair is bound to at most one MediaWiki user.",
+				"columns": [
+					"qqc_openid",
+					"qqc_appid"
+				],
+				"unique": true
+			}
+		],
+		"pk": [
+			"qqc_user"
+		]
+	}
+]

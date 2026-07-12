@@ -1,0 +1,14 @@
+# Composer
+composer.lock
+vendor/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ZCode / Claude
+.zcode/
+.claude/
