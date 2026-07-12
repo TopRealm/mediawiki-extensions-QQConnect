@@ -67,14 +67,14 @@ https://你的网站域名/wiki/Special:QQConnectLogin
 
 所有配置均在 `LocalSettings.php` 中设置。详见 [docs/CONFIG.md](docs/CONFIG.md)。
 
-| 配置项 | 类型 | 默认值 | 说明 |
-|---|---|---|---|
-| `$wgQQConnectAppId` | string | `''` | QQ 互联 APP ID |
-| `$wgQQConnectAppKey` | string | `''` | QQ 互联 APP KEY(密钥,保密) |
-| `$wgQQConnectRedirectUri` | string\|null | `null` | OAuth 回调地址,null 时自动生成 |
-| `$wgQQConnectTestMode` | bool | `true` | 占位测试模式开关 |
-| `$wgQQConnectRequireBind` | bool | `false` | 强制绑定 QQ 才能编辑 |
-| `$wgQQConnectScopes` | string | `'get_user_info'` | 请求的 QQ 互联 API 权限 |
+| 配置项                      | 类型         | 默认值              | 说明                           |
+| --------------------------- | ------------ | ------------------- | ------------------------------ |
+| `$wgQQConnectAppId`       | string       | `''`              | QQ 互联 APP ID                 |
+| `$wgQQConnectAppKey`      | string       | `''`              | QQ 互联 APP KEY(密钥,保密)     |
+| `$wgQQConnectRedirectUri` | string\|null | `null`            | OAuth 回调地址,null 时自动生成 |
+| `$wgQQConnectTestMode`    | bool         | `true`            | 占位测试模式开关               |
+| `$wgQQConnectRequireBind` | bool         | `false`           | 强制绑定 QQ 才能编辑           |
+| `$wgQQConnectScopes`      | string       | `'get_user_info'` | 请求的 QQ 互联 API 权限        |
 
 ## 使用流程
 
@@ -103,6 +103,7 @@ https://你的网站域名/wiki/Special:QQConnectLogin
 ### 账号管理
 
 登录后访问 `Special:QQConnect`(或通过个人菜单的"QQ"链接、个人参数设置的"QQ互联"分区进入):
+
 - 查看当前绑定的 QQ(昵称、OpenID、头像、绑定时间)。
 - 点击"更换"重新走 QQ 授权流程,绑定新的 QQ(旧绑定自动解除)。
 - 点击"解绑"解除当前 QQ 绑定。
@@ -110,6 +111,7 @@ https://你的网站域名/wiki/Special:QQConnectLogin
 ### 管理员操作
 
 拥有 `qqconnect-manage` 权限的用户可访问 `Special:QQConnectAdmin`:
+
 - 查看所有用户的 QQ 绑定列表。
 - 按用户名搜索。
 - 强制解绑任意用户的 QQ(仅删除绑定关系,不影响 MediaWiki 账号本身)。
@@ -128,12 +130,12 @@ https://你的网站域名/wiki/Special:QQConnectLogin
 
 ## 皮肤兼容性
 
-| 皮肤 | 兼容性 | 说明 |
-|---|---|---|
-| **Citizen** | ✅ 主要适配 | 个人菜单从标准 `data-user-menu` portlet 渲染,样式已优化 |
-| **Vector**(2022) | ✅ 兼容 | 同上 |
-| **Timeless** | ✅ 兼容 | 同上 |
-| 其他基于 SkinTemplate 的皮肤 | ✅ 应当兼容 | 只要使用标准 portlet 渲染即可 |
+| 皮肤                         | 兼容性      | 说明                                                     |
+| ---------------------------- | ----------- | -------------------------------------------------------- |
+| **Citizen**            | ✅ 主要适配 | 个人菜单从标准`data-user-menu` portlet 渲染,样式已优化 |
+| **Vector**(2022)       | ✅ 兼容     | 同上                                                     |
+| **Timeless**           | ✅ 兼容     | 同上                                                     |
+| 其他基于 SkinTemplate 的皮肤 | ✅ 应当兼容 | 只要使用标准 portlet 渲染即可                            |
 
 QQ 登录按钮通过 `ButtonAuthenticationRequest` 注入登录表单,在所有皮肤中表现一致。
 
@@ -141,14 +143,14 @@ QQ 登录按钮通过 `ButtonAuthenticationRequest` 注入登录表单,在所有
 
 扩展创建一张表 `qqconnect_users`:
 
-| 列 | 类型 | 说明 |
-|---|---|---|
-| `qqc_user` | INT UNSIGNED | MediaWiki user_id(主键) |
-| `qqc_openid` | VARCHAR(255) | QQ OpenID |
-| `qqc_appid` | VARCHAR(255) | 绑定时的 APPID |
-| `qqc_nickname` | VARCHAR(255) | QQ 昵称(展示用) |
-| `qqc_avatar` | VARCHAR(512) | QQ 头像 URL |
-| `qqc_bound_timestamp` | BINARY(14) | 绑定时间 |
+| 列                      | 类型         | 说明                    |
+| ----------------------- | ------------ | ----------------------- |
+| `qqc_user`            | INT UNSIGNED | MediaWiki user_id(主键) |
+| `qqc_openid`          | VARCHAR(255) | QQ OpenID               |
+| `qqc_appid`           | VARCHAR(255) | 绑定时的 APPID          |
+| `qqc_nickname`        | VARCHAR(255) | QQ 昵称(展示用)         |
+| `qqc_avatar`          | VARCHAR(512) | QQ 头像 URL             |
+| `qqc_bound_timestamp` | BINARY(14)   | 绑定时间                |
 
 约束:`qqc_user` 主键(一个 MediaWiki 用户最多绑一个 QQ);`(qqc_openid, qqc_appid)` 唯一索引(一个 QQ 最多绑一个 MediaWiki 用户)。
 
@@ -156,8 +158,8 @@ QQ 登录按钮通过 `ButtonAuthenticationRequest` 注入登录表单,在所有
 
 本扩展注册了 `qqconnect-manage` 权限,但**不在 `extension.json` 中预定义任何用户组的权限授予**。该权限默认不授予任何组,需由站点管理员手动分配。
 
-| 权限 | 默认授予 | 说明 |
-|---|---|---|
+| 权限                 | 默认授予       | 说明                                                |
+| -------------------- | -------------- | --------------------------------------------------- |
 | `qqconnect-manage` | 无(需手动配置) | 管理其他用户的 QQ 绑定(访问 Special:QQConnectAdmin) |
 
 ### 权限配置示例
@@ -177,11 +179,11 @@ $wgGroupPermissions['qqconnect-manager']['qqconnect-manage'] = true;
 
 ## 特殊页面
 
-| 页面 | 权限 | 说明 |
-|---|---|---|
-| `Special:QQConnectLogin` | 所有人(含匿名) | QQ OAuth 回调与流程控制 |
-| `Special:QQConnect` | 需登录 | 用户管理自己的 QQ 绑定 |
-| `Special:QQConnectAdmin` | `qqconnect-manage` | 管理员管理所有绑定 |
+| 页面                       | 权限                 | 说明                    |
+| -------------------------- | -------------------- | ----------------------- |
+| `Special:QQConnectLogin` | 所有人(含匿名)       | QQ OAuth 回调与流程控制 |
+| `Special:QQConnect`      | 需登录               | 用户管理自己的 QQ 绑定  |
+| `Special:QQConnectAdmin` | `qqconnect-manage` | 管理员管理所有绑定      |
 
 ## 依赖
 
@@ -192,18 +194,23 @@ $wgGroupPermissions['qqconnect-manager']['qqconnect-manage'] = true;
 ## 常见问题
 
 ### Q: 测试模式下按钮点击后显示什么?
+
 A: 显示一个说明页,告知用户 QQ 登录处于测试模式,管理员需配置 APP ID/KEY 并关闭测试模式才能正式启用。
 
 ### Q: 一个 QQ 能绑多个 MediaWiki 账号吗?
+
 A: 不能。一个 QQ OpenID(对应一个 APPID)只能绑定一个 MediaWiki 账号。反之,一个 MediaWiki 账号也只能绑一个 QQ。
 
 ### Q: 更换绑定后,旧 QQ 还能登录原账号吗?
+
 A: 不能。更换绑定会用新 QQ 覆盖旧绑定记录,旧 QQ 自动解除关联。
 
 ### Q: 启用 `$wgQQConnectRequireBind` 后,管理员也必须绑定才能编辑吗?
+
 A: 不,拥有 `qqconnect-manage` 权限的用户豁免。
 
 ### Q: 回调地址报 `redirect uri is illegal(100010)` 怎么办?
+
 A: 请确认 QQ 互联管理中心填写的回调地址域名与实际请求的 `redirect_uri` 域名完全一致。可用 `$wgQQConnectRedirectUri` 显式指定。
 
 ## 开发文档

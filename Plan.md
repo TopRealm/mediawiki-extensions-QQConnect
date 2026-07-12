@@ -64,7 +64,7 @@ state 存 session 防 CSRF。openid 作为稳定标识(非昵称)。
 | `schema/postgres/tables-generated.sql` | ✅ | PostgreSQL 建表 |
 | `schema/sqlite/tables-generated.sql` | ✅ | SQLite 建表 |
 | `includes/SchemaHooks.php` | ✅ | LoadExtensionSchemaUpdates |
-| `includes/Config.php` | ✅ | 配置封装(QQConnectConfig) |
+| `includes/QQConnectConfig.php` | ✅ | 配置封装(QQConnectConfig) |
 | `includes/ServiceWiring.php` | ✅ | DI 服务装配 |
 | `includes/QQStore.php` | ✅ | qqconnect_users 表 CRUD |
 | `includes/QQClient.php` | ✅ | QQ OAuth2 HTTP 客户端 |
