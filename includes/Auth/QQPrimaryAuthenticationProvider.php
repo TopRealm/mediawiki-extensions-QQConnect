@@ -261,4 +261,31 @@ class QQPrimaryAuthenticationProvider extends AbstractPrimaryAuthenticationProvi
 	public function providerAllowsPropertyChange( $property ) {
 		return true;
 	}
+
+	/**
+	 * Check whether the given authentication data change is allowed.
+	 *
+	 * This provider does not own password / email credentials, so it
+	 * permits all changes by default.
+	 *
+	 * @param AuthenticationRequest $req
+	 * @param bool $checkData
+	 * @return \StatusValue
+	 */
+	public function providerAllowsAuthenticationDataChange( AuthenticationRequest $req, $checkData = true ) {
+		return \StatusValue::newGood();
+	}
+
+	/**
+	 * Perform an authentication data change.
+	 *
+	 * This provider does not own password / email credentials, so this
+	 * is a no-op.
+	 *
+	 * @param AuthenticationRequest $req
+	 * @return \StatusValue
+	 */
+	public function providerChangeAuthenticationData( AuthenticationRequest $req ) {
+		return \StatusValue::newGood();
+	}
 }
