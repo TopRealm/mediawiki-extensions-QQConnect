@@ -218,6 +218,12 @@ A: 请确认 QQ 互联管理中心填写的回调地址域名与实际请求的 
 - [配置参考](docs/CONFIG.md)
 - [项目计划与进度](Plan.md)
 
+## 商标声明 / Trademark Notice
+
+"QQ"及 QQ 标识（`resources/SimpleIconsQq.svg`）是**腾讯控股有限公司（Tencent Holdings Limited，腾讯公司）**的注册商标或商标。本扩展仅将该图标用于标识 QQ 互联（QQ Connect）登录服务功能，不构成腾讯公司对本扩展的任何背书、赞助或关联。该 SVG 图标来源于 [Simple Icons](https://simpleicons.org/)（CC0），图标本身的商标权及其他知识产权归腾讯公司所有。
+
+The "QQ" name and the QQ logo (`resources/SimpleIconsQq.svg`) are registered trademarks or trademarks of **Tencent Holdings Limited**. This extension uses the icon solely to identify the QQ Connect login service and does not imply endorsement, sponsorship, or affiliation by Tencent. The SVG icon file is sourced from [Simple Icons](https://simpleicons.org/) (CC0); the trademark and all other intellectual property rights in the logo belong to Tencent.
+
 ## 许可证
 
 GPL-2.0-or-later

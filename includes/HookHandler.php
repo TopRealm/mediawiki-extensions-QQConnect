@@ -79,16 +79,16 @@ class HookHandler {
 		&$formDescriptor,
 		$action
 	) {
-		// The button field key is the QQLoginAuthenticationRequest button name.
+		// Position the QQ login button next to the standard "Log in" button.
+		// IMPORTANT: only set qqconnect-login-button in cssclass. The Codex
+		// classes (cdx-button, cdx-button--action-progressive,
+		// cdx-button--weight-primary) are added automatically by
+		// CodexHTMLForm to the <button> element. Putting them in cssclass
+		// would ALSO add them to the wrapper <div> and break the layout.
 		$key = QQLoginAuthenticationRequest::BUTTON_NAME;
 		if ( isset( $formDescriptor[$key] ) ) {
-			// Use Codex button classes (cdx-button) so the button matches the
-			// standard "Log in" button in size, alignment, and shape on Citizen,
-			// Vector 2022, and any skin using CodexHTMLForm. The custom
-			// qqconnect-login-button class allows CSS to override the brand
-			// color without touching sizing/layout.
 			$formDescriptor[$key]['weight'] = 101;
-			$formDescriptor[$key]['cssclass'] = 'qqconnect-login-button cdx-button cdx-button--action-progressive cdx-button--weight-primary';
+			$formDescriptor[$key]['cssclass'] = 'qqconnect-login-button';
 		}
 	}
 
@@ -144,12 +144,14 @@ class HookHandler {
 		}
 
 		// A link to the management page styled as a Codex progressive button.
+		// cdx-button--fake-button--enabled is required on <a> elements because
+		// :enabled only matches <button>/<input>, not links.
 		$manageUrl = SpecialPage::getTitleFor( 'QQConnect' )->getLocalURL();
 		$preferences['qqconnect-manage-link'] = [
 			'type' => 'info',
 			'raw' => true,
 			'label-message' => 'qqconnect-prefs-section-desc',
-			'default' => '<a class="cdx-button cdx-button--action-progressive cdx-button--weight-primary" href="'
+			'default' => '<a class="cdx-button cdx-button--action-progressive cdx-button--weight-primary cdx-button--fake-button--enabled" href="'
 				. htmlspecialchars( $manageUrl ) . '">'
 				. $this->msg( 'qqconnect-prefs-manage' )->escaped() . '</a>',
 			'section' => 'personal/qqconnect',
