@@ -87,6 +87,7 @@
 	"qqconnect-admin-search-submit": "搜索",
 
 	"prefs-qqconnect": "QQ互联",
+	"prefs-personal-qqconnect": "QQ互联",
 	"qqconnect-prefs-section": "QQ互联",
 	"qqconnect-prefs-section-desc": "管理您的QQ账号绑定。",
 	"qqconnect-prefs-bound": "已绑定QQ:$1",

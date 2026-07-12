@@ -6,25 +6,30 @@
  * typography match the standard "Log in" button across Citizen, Vector 2022,
  * and any skin using the Codex form system in MW 1.43+.
  *
- * This stylesheet only overrides the brand colour (QQ blue #12b7f5) and
- * provides layout helpers for the management/admin/choose pages.
+ * A QQ penguin SVG icon is added via ::before pseudo-element.
  */
 
 /* ---- Login form button (Codex-based) ---- */
-.qqconnect-login-button.cdx-button--action-progressive.cdx-button--weight-primary {
-	background-color: #12b7f5;
-	border-color: #12b7f5;
-	color: #fff;
-}
 
-.qqconnect-login-button.cdx-button--action-progressive.cdx-button--weight-primary:hover {
-	background-color: #0ea3e0;
-	border-color: #0ea3e0;
-}
+/* Remove QQ brand blue overrides — the button now uses the standard Codex
+ * progressive colour (#36c) to match the regular "Log in" button exactly.
+ * QQ brand identity is conveyed by the penguin icon. */
 
-.qqconnect-login-button.cdx-button--action-progressive.cdx-button--weight-primary:active {
-	background-color: #0b8ec9;
-	border-color: #0b8ec9;
+/* QQ penguin icon injected before the button text.
+ * Uses a full-color SVG as background-image so the black body, white belly,
+ * orange beak, and red scarf are all distinct and recognisable at small sizes. */
+.qqconnect-login-button.cdx-button::before {
+	content: '';
+	display: inline-block;
+	width: 20px;
+	height: 20px;
+	margin-right: 6px;
+	flex-shrink: 0;
+	vertical-align: middle;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3CclipPath id='body'%3E%3Cpath d='M12 2C9.2 2 7 4.2 7 7v1.5L6 14l2 6h8l2-6-1-5.5V7c0-2.8-2.2-5-5-5z'/%3E%3C/clipPath%3E%3C/defs%3E%3C!-- Body --%3E%3Cpath d='M12 2C9.2 2 7 4.2 7 7v1.5L6 14l2 6h8l2-6-1-5.5V7c0-2.8-2.2-5-5-5z' fill='%23111'/%3E%3C!-- White belly --%3E%3Cellipse cx='12' cy='13' rx='4' ry='5.5' fill='%23fff'/%3E%3C!-- White face --%3E%3Cpath d='M8.5 6.5c0-2 1.5-3.5 3.5-3.5s3.5 1.5 3.5 3.5-1.5 3-3.5 3-3.5-1-3.5-3z' fill='%23fff'/%3E%3C!-- Eyes --%3E%3Ccircle cx='10' cy='6.5' r='1.1' fill='%23000'/%3E%3Ccircle cx='14' cy='6.5' r='1.1' fill='%23000'/%3E%3C!-- Eye highlights --%3E%3Ccircle cx='10' cy='6.1' r='.35' fill='%23fff'/%3E%3Ccircle cx='14' cy='6.1' r='.35' fill='%23fff'/%3E%3C!-- Beak --%3E%3Cpath d='M11 8.5h2l-1 2.5z' fill='%23ff8c00'/%3E%3C!-- Red scarf --%3E%3Crect x='7' y='10' width='10' height='2' rx='1' fill='%23e53935'/%3E%3C!-- Scarf tail --%3E%3Cpath d='M7 10v3.5l1.2-1.2V10z' fill='%23e53935'/%3E%3C/svg%3E");
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position: center;
 }
 
 /* ---- Management page (Special:QQConnect) ---- */

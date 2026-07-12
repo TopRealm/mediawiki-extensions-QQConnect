@@ -87,6 +87,7 @@
 	"qqconnect-admin-search-submit": "Search",
 
 	"prefs-qqconnect": "QQ Connect",
+	"prefs-personal-qqconnect": "QQ Connect",
 	"qqconnect-prefs-section": "QQ Connect",
 	"qqconnect-prefs-section-desc": "Manage your QQ account binding.",
 	"qqconnect-prefs-bound": "Bound to QQ: $1",

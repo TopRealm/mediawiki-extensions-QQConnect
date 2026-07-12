@@ -89,7 +89,6 @@ class HookHandler {
 			// color without touching sizing/layout.
 			$formDescriptor[$key]['weight'] = 101;
 			$formDescriptor[$key]['cssclass'] = 'qqconnect-login-button cdx-button cdx-button--action-progressive cdx-button--weight-primary';
-			$formDescriptor[$key]['buttonlabel-message'] = 'qqconnect-login-button';
 		}
 	}
 
@@ -128,28 +127,30 @@ class HookHandler {
 
 		if ( $binding ) {
 			$nickname = $binding['qqc_nickname'] ?? $binding['qqc_openid'];
+			// Use array format for label-message to pass $nickname as $1.
 			$preferences['qqconnect-bound'] = [
 				'type' => 'info',
-				'label-message' => 'qqconnect-prefs-bound',
-				'default' => $this->formatBound( $nickname ),
+				'label-message' => [ 'qqconnect-prefs-bound', $nickname ],
+				'default' => '',
 				'section' => 'personal/qqconnect',
 			];
 		} else {
 			$preferences['qqconnect-bound'] = [
 				'type' => 'info',
-				'label-message' => 'qqconnect-prefs-bound',
-				'default' => $this->msg( 'qqconnect-prefs-not-bound' )->text(),
+				'label-message' => 'qqconnect-prefs-not-bound',
+				'default' => '',
 				'section' => 'personal/qqconnect',
 			];
 		}
 
-		// A link to the management page.
+		// A link to the management page styled as a Codex progressive button.
 		$manageUrl = SpecialPage::getTitleFor( 'QQConnect' )->getLocalURL();
 		$preferences['qqconnect-manage-link'] = [
 			'type' => 'info',
 			'raw' => true,
 			'label-message' => 'qqconnect-prefs-section-desc',
-			'default' => '<a href="' . htmlspecialchars( $manageUrl ) . '">'
+			'default' => '<a class="cdx-button cdx-button--action-progressive cdx-button--weight-primary" href="'
+				. htmlspecialchars( $manageUrl ) . '">'
 				. $this->msg( 'qqconnect-prefs-manage' )->escaped() . '</a>',
 			'section' => 'personal/qqconnect',
 		];

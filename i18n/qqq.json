@@ -86,6 +86,7 @@
 	"qqconnect-admin-search-submit": "Search button.",
 
 	"prefs-qqconnect": "Sub-section heading inside the User profile preferences tab for QQ Connect settings.",
+	"prefs-personal-qqconnect": "Sub-section heading inside the User profile preferences tab for QQ Connect settings. MW 1.43+ may use this key (with tab prefix) for subsection headers.",
 	"qqconnect-prefs-section": "Preferences section tab name.",
 	"qqconnect-prefs-section-desc": "Preferences section description.",
 	"qqconnect-prefs-bound": "Preferences info; $1 is nickname.",
