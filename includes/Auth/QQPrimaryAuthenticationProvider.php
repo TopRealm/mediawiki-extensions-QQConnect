@@ -44,7 +44,6 @@ use MediaWiki\Extension\QQConnect\Util\UsernameCleaner;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\User\User;
-use Psr\Log\LoggerInterface;
 use RawMessage;
 
 class QQPrimaryAuthenticationProvider extends AbstractPrimaryAuthenticationProvider {
@@ -65,9 +64,6 @@ class QQPrimaryAuthenticationProvider extends AbstractPrimaryAuthenticationProvi
 
 	/** @var QQStore */
 	private $store;
-
-	/** @var LoggerInterface */
-	private $logger;
 
 	public function __construct(
 		QQConnectConfig $config,
