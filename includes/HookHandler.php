@@ -171,7 +171,7 @@ class HookHandler {
 	 * @param bool $autocreated
 	 */
 	public function onLocalUserCreated( $user, $autocreated ) {
-		$authManager = AuthManager::singleton();
+		$authManager = MediaWikiServices::getInstance()->getAuthManager();
 		$pending = $authManager->getAuthenticationSessionData( P::SESSION_KEY_PENDING, null );
 		if ( !$pending ) {
 			return;

@@ -22,6 +22,7 @@ use MediaWiki\Extension\QQConnect\QQClient;
 use MediaWiki\Extension\QQConnect\QQConnectConfig;
 use MediaWiki\Extension\QQConnect\QQStore;
 use MediaWiki\Logger\LoggerFactory;
+use MediaWiki\MediaWikiServices;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\User\User;
 use Psr\Log\LoggerInterface;
@@ -174,7 +175,7 @@ class SpecialQQConnect extends SpecialPage {
 		}
 		$state = $this->client->generateState();
 		$redirectUri = $this->getConfiguredRedirectUri();
-		$authManager = \MediaWiki\Auth\AuthManager::singleton();
+		$authManager = MediaWikiServices::getInstance()->getAuthManager();
 		$authManager->setAuthenticationSessionData( P::SESSION_KEY_STATE, $state );
 		$authManager->setAuthenticationSessionData( P::SESSION_KEY_REDIRECT, $redirectUri );
 		// Flag: this OAuth round-trip is for binding the current user.
@@ -196,7 +197,7 @@ class SpecialQQConnect extends SpecialPage {
 		}
 		$state = $this->client->generateState();
 		$redirectUri = $this->getConfiguredRedirectUri();
-		$authManager = \MediaWiki\Auth\AuthManager::singleton();
+		$authManager = MediaWikiServices::getInstance()->getAuthManager();
 		$authManager->setAuthenticationSessionData( P::SESSION_KEY_STATE, $state );
 		$authManager->setAuthenticationSessionData( P::SESSION_KEY_REDIRECT, $redirectUri );
 		$authManager->setAuthenticationSessionData( 'QQConnect:bindMode', 'rebind' );

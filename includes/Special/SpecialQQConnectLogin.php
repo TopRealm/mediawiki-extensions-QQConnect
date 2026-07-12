@@ -144,7 +144,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 			return;
 		}
 
-		$authManager = AuthManager::singleton();
+		$authManager = MediaWikiServices::getInstance()->getAuthManager();
 		$bindMode = $authManager->getAuthenticationSessionData( 'QQConnect:bindMode', null );
 
 		// If there is no AuthManager login state and no bind mode, send the
@@ -174,7 +174,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 	 */
 	private function handleCallback() {
 		$request = $this->getRequest();
-		$authManager = AuthManager::singleton();
+		$authManager = MediaWikiServices::getInstance()->getAuthManager();
 
 		// Verify state to prevent CSRF.
 		$expectedState = $authManager->getAuthenticationSessionData( P::SESSION_KEY_STATE, '' );
@@ -269,7 +269,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 		string $avatar,
 		?array $existingBinding
 	) {
-		$authManager = AuthManager::singleton();
+		$authManager = MediaWikiServices::getInstance()->getAuthManager();
 		$authManager->removeAuthenticationSessionData( 'QQConnect:bindMode' );
 		$user = $this->getUser();
 
@@ -438,7 +438,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 			return StatusValue::newFatal( 'qqconnect-error-auth-failed' );
 		}
 
-		$authManager = AuthManager::singleton();
+		$authManager = MediaWikiServices::getInstance()->getAuthManager();
 
 		// Obtain the login AuthenticationRequests and populate a password
 		// request with the submitted credentials.
@@ -537,7 +537,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 	 * verbatim rather than constructing a bare Special:Userlogin URL.
 	 */
 	private function resumeLoginFlow() {
-		$authManager = AuthManager::singleton();
+		$authManager = MediaWikiServices::getInstance()->getAuthManager();
 		$returnToUrl = $authManager->getAuthenticationSessionData( P::SESSION_KEY_RETURNTO, '' );
 		if ( $returnToUrl === '' ) {
 			// Session lost; fall back to the login page with an error.
@@ -552,7 +552,8 @@ class SpecialQQConnectLogin extends SpecialPage {
 	 * @return array|null
 	 */
 	private function getPending(): ?array {
-		return AuthManager::singleton()->getAuthenticationSessionData( P::SESSION_KEY_PENDING, null );
+		return MediaWikiServices::getInstance()->getAuthManager()
+			->getAuthenticationSessionData( P::SESSION_KEY_PENDING, null );
 	}
 
 	/**
