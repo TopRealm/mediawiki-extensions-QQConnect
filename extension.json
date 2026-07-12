@@ -4,7 +4,8 @@
 	"namemsg": "qqconnect-desc-name",
 	"type": "other",
 	"author": [
-		"Zorua Fox and Youshou Archives Contributors"
+		"Zorua Fox",
+		"Youshou Archives Contributors"
 	],
 	"version": "1.0.0",
 	"url": "https://www.mediawiki.org/wiki/Extension:QQConnect",

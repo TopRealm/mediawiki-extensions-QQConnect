@@ -1,7 +1,8 @@
 {
 	"@metadata": {
 		"authors": [
-			"Zorua Fox and Youshou Archives Contributors"
+			"Zorua Fox",
+			"Youshou Archives Contributors"
 		]
 	},
 	"qqconnect-desc-name": "The name of the extension.",
