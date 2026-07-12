@@ -142,14 +142,6 @@
 	"AvailableRights": [
 		"qqconnect-manage"
 	],
-	"GroupPermissions": {
-		"bureaucrat": {
-			"qqconnect-manage": true
-		},
-		"sysop": {
-			"qqconnect-manage": true
-		}
-	},
 	"ExtensionFunctions": [
 		"MediaWiki\\Extension\\QQConnect\\HookHandler::onExtensionFunction"
 	]
