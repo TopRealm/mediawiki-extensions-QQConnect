@@ -147,14 +147,22 @@ class SpecialQQConnectLogin extends SpecialPage {
 		$authManager = MediaWikiServices::getInstance()->getAuthManager();
 		$bindMode = $authManager->getAuthenticationSessionData( 'QQConnect:bindMode', null );
 
-		// If there is no AuthManager login state and no bind mode, send the
-		// user to the login form so they click the QQ button there.
+		// If there is no AuthManager login state and no bind mode, check for
+		// a ?returnto= URL parameter (used by AjaxLogin). If present, stash
+		// it so we behave as if the flow was started from Special:Userlogin.
 		$hasAuthState = $authManager->getAuthenticationSessionData( P::SESSION_KEY_RETURNTO, '' ) !== '';
 		if ( !$hasAuthState && $bindMode === null ) {
-			$this->getOutput()->redirect(
-				SpecialPage::getTitleFor( 'Userlogin' )->getFullURL()
-			);
-			return;
+			$returntoUrl = $this->getRequest()->getVal( 'returnto' );
+			if ( $returntoUrl ) {
+				$authManager->setAuthenticationSessionData(
+					P::SESSION_KEY_RETURNTO, $returntoUrl
+				);
+			} else {
+				$this->getOutput()->redirect(
+					SpecialPage::getTitleFor( 'Userlogin' )->getFullURL()
+				);
+				return;
+			}
 		}
 
 		$state = $this->client->generateState();
