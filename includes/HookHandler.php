@@ -10,6 +10,9 @@
  *  - LocalUserCreated           : complete binding for accounts created via
  *    the "create new account" path of the QQ login flow.
  *  - getUserPermissionsErrors   : enforce $wgQQConnectRequireBind.
+ *  - MakeGlobalVariablesScript  : expose safe config values to mw.config.
+ *    Exposed: wgQQConnectAppId, wgQQConnectTestMode, wgQQConnectRequireBind.
+ *    NOT exposed: AppKey (secret), RedirectUri, Scopes.
  *
  * Also exposes ::onExtensionFunction (registered via ExtensionFunctions) for
  * one-time setup that needs the fully-initialized service container.
@@ -244,6 +247,29 @@ class HookHandler {
 		// Block: set the error message and abort.
 		$result = [ 'qqconnect-error-require-bind' ];
 		return false;
+	}
+
+	/**
+	 * Expose safe extension config values to the client-side mw.config so
+	 * that front-end JavaScript can read them via mw.config.get().
+	 *
+	 * Exposed:
+	 *  - wgQQConnectAppId      (APPID, needed by QQ JS SDK)
+	 *  - wgQQConnectTestMode   (so the front-end can adapt UI accordingly)
+	 *  - wgQQConnectRequireBind (so the front-end can show early warnings)
+	 *
+	 * Deliberately NOT exposed:
+	 *  - wgQQConnectAppKey     (SECRET — must stay server-side only)
+	 *  - wgQQConnectRedirectUri (server-side flow only)
+	 *  - wgQQConnectScopes     (server-side OAuth param only)
+	 *
+	 * @param array &$vars
+	 * @param \OutputPage $out
+	 */
+	public function onMakeGlobalVariablesScript( &$vars, $out ): void {
+		$vars['wgQQConnectAppId'] = $this->config->getAppId();
+		$vars['wgQQConnectTestMode'] = $this->config->isTestMode();
+		$vars['wgQQConnectRequireBind'] = $this->config->isRequireBind();
 	}
 
 	/**

@@ -106,6 +106,7 @@
 		"GetPreferences": "main",
 		"LocalUserCreated": "main",
 		"getUserPermissionsErrors": "main",
+		"MakeGlobalVariablesScript": "main",
 		"LoadExtensionSchemaUpdates": "schema"
 	},
 	"AuthManagerAutoConfig": {
