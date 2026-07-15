@@ -175,14 +175,17 @@ class HookHandler {
 	 */
 	public function onLocalUserCreated( $user, $autocreated ) {
 		$authManager = MediaWikiServices::getInstance()->getAuthManager();
-		$pending = $authManager->getAuthenticationSessionData( P::SESSION_KEY_PENDING, null );
+		// QQConnect:pending is stored in an independent session secret
+		// (not inside authData), so we read it directly from the session.
+		$session = \RequestContext::getMain()->getRequest()->getSession();
+		$pending = $session->getSecret( P::SESSION_KEY_PENDING );
 		if ( !$pending ) {
 			return;
 		}
 		// Only bind if not already bound (avoid double-binding if the hook
 		// fires twice or the user somehow already has a binding).
 		if ( $this->store->userIsBound( $user->getId() ) ) {
-			$authManager->removeAuthenticationSessionData( P::SESSION_KEY_PENDING );
+			$session->setSecret( P::SESSION_KEY_PENDING, null );
 			return;
 		}
 		// Verify the QQ isn't bound to another user (shouldn't happen since we
@@ -192,7 +195,7 @@ class HookHandler {
 				'Cannot bind pending QQ {unionid} to new user {user}: unionid already bound',
 				[ 'unionid' => $pending['unionid'], 'user' => $user->getName() ]
 			);
-			$authManager->removeAuthenticationSessionData( P::SESSION_KEY_PENDING );
+			$session->setSecret( P::SESSION_KEY_PENDING, null );
 			return;
 		}
 		$ok = $this->store->bind(
@@ -208,7 +211,7 @@ class HookHandler {
 				[ 'unionid' => $pending['unionid'], 'user' => $user->getName() ]
 			);
 		}
-		$authManager->removeAuthenticationSessionData( P::SESSION_KEY_PENDING );
+		$session->setSecret( P::SESSION_KEY_PENDING, null );
 	}
 
 	/**
