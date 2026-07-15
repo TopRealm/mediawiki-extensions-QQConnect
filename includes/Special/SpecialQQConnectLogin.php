@@ -777,8 +777,11 @@ class SpecialQQConnectLogin extends SpecialPage {
 					return StatusValue::newFatal( $msg );
 				}
 				// No error — just need additional input.  Flush and redirect.
-				$this->getRequest()->getSession()->persist();
-				return StatusValue::newGood();
+			$this->getRequest()->getSession()->persist();
+			$this->getOutput()->redirect(
+				$this->getPageTitle()->getLocalURL( [ 'action' => 'link' ] )
+			);
+			return StatusValue::newGood();
 			}
 
 			$authManager->removeAuthenticationSessionData( 'QQConnect:linkAuthState' );
@@ -831,6 +834,12 @@ class SpecialQQConnectLogin extends SpecialPage {
 			] );
 			$this->logger->warning( 'QQ link step1 UI: linkAuthState set, persisting session' );
 			$this->getRequest()->getSession()->persist();
+			// MW 1.43 HTMLForm::show() does NOT set a redirect when the
+			// submit callback returns newGood().  We must do it explicitly
+			// so the browser navigates to the 2FA form.
+			$this->getOutput()->redirect(
+				$this->getPageTitle()->getLocalURL( [ 'action' => 'link' ] )
+			);
 			return StatusValue::newGood();
 		}
 
@@ -876,6 +885,9 @@ class SpecialQQConnectLogin extends SpecialPage {
 			'QQConnect:linkSuccess', $boundUser->getName()
 		);
 		$this->getRequest()->getSession()->persist();
+		$this->getOutput()->redirect(
+			$this->getPageTitle()->getFullURL()
+		);
 		return StatusValue::newGood();
 	}
 
