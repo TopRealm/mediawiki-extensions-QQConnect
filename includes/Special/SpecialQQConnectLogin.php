@@ -38,6 +38,7 @@ use MediaWiki\Extension\QQConnect\QQStore;
 use MediaWiki\Extension\QQConnect\Util\UsernameCleaner;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Message\Message;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\Title\Title;
 use MediaWiki\User\User;
@@ -586,30 +587,15 @@ class SpecialQQConnectLogin extends SpecialPage {
 				$out->addWikiMsg( 'qqconnect-link-form-2fa-intro',
 					$step2pending['nickname'] ?? $step2pending['unionid'] );
 
-			// Build the form descriptor from the secondary auth request
-				// fields.  AuthenticationRequest::getFieldInfo() returns
-				// descriptors with type names like 'string', 'password' etc.
-				// that are NOT in HTMLForm's $typeMappings.  We map them to
-				// the HTMLForm-compatible 'class' so OOUI can render them.
-				$formDescriptor = [];
-				foreach ( $linkAuthState['neededFields'] as $fieldName => $fieldInfo ) {
-					$formDescriptor[$fieldName] = $fieldInfo;
-					if ( empty( $formDescriptor[$fieldName]['class'] ) ) {
-						// Unset the (empty) class so HTMLForm falls back to
-						// resolving type via its typeMappings table.
-						unset( $formDescriptor[$fieldName]['class'] );
-						$authType = $formDescriptor[$fieldName]['type'] ?? 'string';
-						// Map AuthenticationRequest field types to HTMLForm types.
-						$formDescriptor[$fieldName]['type'] = match ( $authType ) {
-							'string' => 'text',
-							'password' => 'password',
-							'hidden' => 'hidden',
-							'checkbox' => 'check',
-							'select' => 'select',
-							default => 'text',
-						};
-					}
-				}
+				// Fetch the actual AuthenticationRequest objects that
+				// AuthManager expects for this continuation step.  This reads
+				// the stored AUTHN_STATE and returns the exact requests that
+				// continueAuthentication() will accept — no manual field
+				// serialization needed.
+				$contReqs = $authManager->getAuthenticationRequests(
+					AuthManager::ACTION_LOGIN_CONTINUE
+				);
+				$formDescriptor = $this->authRequestsToFormDescriptor( $contReqs );
 				$formDescriptor['linkstep'] = [
 				'type' => 'hidden',
 				'name' => 'linkstep',
@@ -659,6 +645,78 @@ class SpecialQQConnectLogin extends SpecialPage {
 	}
 
 	/**
+	 * Convert an array of AuthenticationRequest objects into an HTMLForm
+	 * descriptor, following the same mapping that AuthManagerSpecialPage uses.
+	 *
+	 * This is necessary because AuthenticationRequest::getFieldInfo() returns
+	 * descriptors with type names (e.g. 'string') that are NOT in HTMLForm's
+	 * $typeMappings table, and because HTMLForm prefixes field names with
+	 * 'wp' by default — which would prevent loadFromSubmission() from finding
+	 * the submitted values (it looks for the raw field name, e.g. 'OATHToken',
+	 * not 'wpOATHToken').
+	 *
+	 * @param AuthenticationRequest[] $requests
+	 * @return array HTMLForm descriptor
+	 */
+	private function authRequestsToFormDescriptor( array $requests ): array {
+		$formDescriptor = [];
+		foreach ( $requests as $req ) {
+			foreach ( $req->getFieldInfo() as $fieldName => $fieldInfo ) {
+				if ( $fieldInfo['type'] === 'null' ) {
+					continue;
+				}
+				// Map AuthenticationRequest type to HTMLForm type.
+				$typeMap = [
+					'string' => 'text',
+					'password' => 'password',
+					'select' => 'select',
+					'checkbox' => 'check',
+					'multiselect' => 'multiselect',
+					'button' => 'submit',
+					'hidden' => 'hidden',
+				];
+				$authType = $fieldInfo['type'] ?? 'string';
+				$htmlType = $typeMap[$authType] ?? 'text';
+
+				$descriptor = [
+					'type' => $htmlType,
+					// CRITICAL: set 'name' to the raw field name so HTMLForm
+					// does NOT prepend 'wp'. loadFromSubmission() looks for
+					// the exact field name (e.g. 'OATHToken').
+					'name' => $fieldName,
+				];
+
+				if ( $htmlType !== 'submit' ) {
+					if ( isset( $fieldInfo['label'] ) ) {
+						$descriptor['label-message'] = $fieldInfo['label'];
+					}
+					if ( isset( $fieldInfo['help'] ) ) {
+						$descriptor['help-message'] = $fieldInfo['help'];
+					}
+					if ( isset( $fieldInfo['options'] ) ) {
+						$descriptor['options'] = array_flip( array_map(
+							static function ( $message ) {
+								return $message instanceof Message
+									? $message->parse() : (string)$message;
+							},
+							$fieldInfo['options']
+						) );
+					}
+					if ( isset( $fieldInfo['value'] ) ) {
+						$descriptor['default'] = $fieldInfo['value'];
+					}
+					if ( empty( $fieldInfo['optional'] ) ) {
+						$descriptor['required'] = true;
+					}
+				}
+
+				$formDescriptor[$fieldName] = $descriptor;
+			}
+		}
+		return $formDescriptor;
+	}
+
+	/**
 	 * Handle link-form submission (both step 1 and step 2).
 	 *
 	 * @param array $data
@@ -699,7 +757,12 @@ class SpecialQQConnectLogin extends SpecialPage {
 				// copy we stashed inside linkAuthState.
 				$bindPending = $linkAuthState['pending'] ?? $pending;
 
-				$reqs = $authManager->getAuthenticationRequests( AuthManager::ACTION_LOGIN );
+				// Use ACTION_LOGIN_CONTINUE to obtain the exact request
+				// objects that AuthManager expects for this continuation
+				// step.  These are the live requests stored in the
+				// AUTHN_STATE session secret — no manual field serialisation
+				// needed.
+				$reqs = $authManager->getAuthenticationRequests( AuthManager::ACTION_LOGIN_CONTINUE );
 				$loadedReqs = AuthenticationRequest::loadRequestsFromSubmission( $reqs, $data );
 				$response = $authManager->continueAuthentication( $loadedReqs );
 
@@ -712,21 +775,11 @@ class SpecialQQConnectLogin extends SpecialPage {
 
 			if ( $response->status === AuthenticationResponse::UI ) {
 				// Still need more input (e.g. backup recovery code after
-				// failed TOTP). Update the stored field descriptors and
-				// re-render the 2FA form.
-				$neededFields = [];
-				foreach ( $response->neededRequests as $req ) {
-					foreach ( $req->getFieldInfo() as $fieldName => $fieldInfo ) {
-						$neededFields[$fieldName] = $fieldInfo;
-					}
-				}
-				// Preserve the pending QQ identity alongside the updated
-				// field descriptors so repeated 2FA attempts (e.g. wrong
-				// TOTP, then recovery code) do not lose the bind target.
-				$authManager->setAuthenticationSessionData( 'QQConnect:linkAuthState', [
-					'neededFields' => $neededFields,
-					'pending' => $linkAuthState['pending'] ?? null,
-				] );
+				// failed TOTP).  The AUTHN_STATE has already been updated
+				// by continueAuthentication() with the new continueRequests,
+				// so handleLinkForm() will pick them up automatically via
+				// getAuthenticationRequests(ACTION_LOGIN_CONTINUE).
+				// Just ensure the session is flushed before the redirect.
 				$this->getRequest()->getSession()->save();
 				return StatusValue::newGood();
 			}
@@ -761,36 +814,30 @@ class SpecialQQConnectLogin extends SpecialPage {
 			);
 		}
 
-			if ( $response->status === AuthenticationResponse::UI ) {
+		if ( $response->status === AuthenticationResponse::UI ) {
 				// Credentials are correct but a secondary provider (e.g.
-				// OATHAuth) requires additional input. Extract the needed
-				// form fields and stash them so handleLinkForm renders the
-				// 2FA step.
+				// OATHAuth) requires additional input.
 				//
 				// IMPORTANT: beginAuthentication() internally calls
 				// removeAuthenticationSessionData(null) which wipes all
 				// custom auth session data INCLUDING QQConnect:pending.
-				// We MUST stash the pending data here alongside the 2FA
-				// field descriptors so that subsequent requests (step 2
-				// rendering and submission) can still access the QQ
-				// identity that is being bound.
-				$neededFields = [];
-				foreach ( $response->neededRequests as $req ) {
-					foreach ( $req->getFieldInfo() as $fieldName => $fieldInfo ) {
-						$neededFields[$fieldName] = $fieldInfo;
-					}
-				}
+				// We stash the pending identity in linkAuthState so
+				// subsequent requests can still access it.
+				//
+				// The 2FA field descriptors do NOT need to be stored here;
+				// handleLinkForm() retrieves them fresh from AuthManager
+				// via getAuthenticationRequests(ACTION_LOGIN_CONTINUE),
+				// which reads the live continueRequests from AUTHN_STATE.
 				$authManager->setAuthenticationSessionData( 'QQConnect:linkAuthState', [
-					'neededFields' => $neededFields,
 					'pending' => $pending,
 				] );
-			// Force session persist before HTMLForm redirect.
-			$this->getRequest()->getSession()->save();
-			// Return good so HTMLForm redirects to the same page; on the
-			// next render handleLinkForm detects linkAuthState and shows
-			// the 2FA form.
-			return StatusValue::newGood();
-		}
+				// Force session persist before HTMLForm redirect.
+				$this->getRequest()->getSession()->save();
+				// Return good so HTMLForm redirects to the same page; on the
+				// next render handleLinkForm detects linkAuthState and shows
+				// the 2FA form.
+				return StatusValue::newGood();
+			}
 
 		// REDIRECT or FAIL.
 			// Restore the pending QQ identity so the user can retry after a
@@ -1003,28 +1050,12 @@ class SpecialQQConnectLogin extends SpecialPage {
 		}
 
 		if ( $response->status === AuthenticationResponse::UI ) {
-				// Build form descriptor from the needed (secondary) requests.
-				// Map AuthenticationRequest field types (e.g. 'string') to
-				// HTMLForm-compatible types so OOUI can render them.
-				$formDescriptor = [];
-				foreach ( $response->neededRequests as $req ) {
-					foreach ( $req->getFieldInfo() as $fieldName => $fieldInfo ) {
-						$formDescriptor[$fieldName] = $fieldInfo;
-						if ( empty( $formDescriptor[$fieldName]['class'] ) ) {
-							unset( $formDescriptor[$fieldName]['class'] );
-							$authType = $formDescriptor[$fieldName]['type'] ?? 'string';
-							$formDescriptor[$fieldName]['type'] = match ( $authType ) {
-								'string' => 'text',
-								'password' => 'password',
-								'hidden' => 'hidden',
-								'checkbox' => 'check',
-								'select' => 'select',
-								default => 'text',
-							};
-						}
-					}
-				}
-			$formDescriptor['__qqconnect_flow'] = [
+				// Build form descriptor from the needed (secondary) requests
+				// using the same mapping that AuthManagerSpecialPage uses.
+				$formDescriptor = $this->authRequestsToFormDescriptor(
+					$response->neededRequests
+				);
+				$formDescriptor['__qqconnect_flow'] = [
 				'type' => 'hidden',
 				'name' => '__qqconnect_flow',
 				'default' => 'verify-bind',
@@ -1067,13 +1098,16 @@ class SpecialQQConnectLogin extends SpecialPage {
 			return StatusValue::newFatal( 'qqconnect-error-invalid-state' );
 		}
 
-		$linkReqs = $authManager->getAuthenticationRequests(
-			AuthManager::ACTION_LINK, $user
-		);
-		$loadedReqs = AuthenticationRequest::loadRequestsFromSubmission(
-			$linkReqs, $data
-		);
-		$response = $authManager->continueAccountLink( $loadedReqs );
+		// Use ACTION_LINK_CONTINUE to obtain the exact request
+			// objects that AuthManager expects for this continuation step,
+			// mirroring the pattern used in the link-bind flow.
+			$linkReqs = $authManager->getAuthenticationRequests(
+				AuthManager::ACTION_LINK_CONTINUE, $user
+			);
+			$loadedReqs = AuthenticationRequest::loadRequestsFromSubmission(
+				$linkReqs, $data
+			);
+			$response = $authManager->continueAccountLink( $loadedReqs );
 
 		if ( $response->status === AuthenticationResponse::PASS ) {
 			$authManager->removeAuthenticationSessionData( 'QQConnect:pendingBind' );
