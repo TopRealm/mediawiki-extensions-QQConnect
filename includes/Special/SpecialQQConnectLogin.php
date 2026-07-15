@@ -571,8 +571,31 @@ class SpecialQQConnectLogin extends SpecialPage {
 				$out->addWikiMsg( 'qqconnect-link-form-2fa-intro',
 					$step2pending['nickname'] ?? $step2pending['unionid'] );
 
-			$formDescriptor = $linkAuthState['neededFields'];
-			$formDescriptor['linkstep'] = [
+			// Build the form descriptor from the secondary auth request
+				// fields.  AuthenticationRequest::getFieldInfo() returns
+				// descriptors with type names like 'string', 'password' etc.
+				// that are NOT in HTMLForm's $typeMappings.  We map them to
+				// the HTMLForm-compatible 'class' so OOUI can render them.
+				$formDescriptor = [];
+				foreach ( $linkAuthState['neededFields'] as $fieldName => $fieldInfo ) {
+					$formDescriptor[$fieldName] = $fieldInfo;
+					if ( empty( $formDescriptor[$fieldName]['class'] ) ) {
+						// Unset the (empty) class so HTMLForm falls back to
+						// resolving type via its typeMappings table.
+						unset( $formDescriptor[$fieldName]['class'] );
+						$authType = $formDescriptor[$fieldName]['type'] ?? 'string';
+						// Map AuthenticationRequest field types to HTMLForm types.
+						$formDescriptor[$fieldName]['type'] = match ( $authType ) {
+							'string' => 'text',
+							'password' => 'password',
+							'hidden' => 'hidden',
+							'checkbox' => 'check',
+							'select' => 'select',
+							default => 'text',
+						};
+					}
+				}
+				$formDescriptor['linkstep'] = [
 				'type' => 'hidden',
 				'name' => 'linkstep',
 				'default' => 'continue',
@@ -965,13 +988,27 @@ class SpecialQQConnectLogin extends SpecialPage {
 		}
 
 		if ( $response->status === AuthenticationResponse::UI ) {
-			// Build form descriptor from the needed (secondary) requests.
-			$formDescriptor = [];
-			foreach ( $response->neededRequests as $req ) {
-				foreach ( $req->getFieldInfo() as $fieldName => $fieldInfo ) {
-					$formDescriptor[$fieldName] = $fieldInfo;
+				// Build form descriptor from the needed (secondary) requests.
+				// Map AuthenticationRequest field types (e.g. 'string') to
+				// HTMLForm-compatible types so OOUI can render them.
+				$formDescriptor = [];
+				foreach ( $response->neededRequests as $req ) {
+					foreach ( $req->getFieldInfo() as $fieldName => $fieldInfo ) {
+						$formDescriptor[$fieldName] = $fieldInfo;
+						if ( empty( $formDescriptor[$fieldName]['class'] ) ) {
+							unset( $formDescriptor[$fieldName]['class'] );
+							$authType = $formDescriptor[$fieldName]['type'] ?? 'string';
+							$formDescriptor[$fieldName]['type'] = match ( $authType ) {
+								'string' => 'text',
+								'password' => 'password',
+								'hidden' => 'hidden',
+								'checkbox' => 'check',
+								'select' => 'select',
+								default => 'text',
+							};
+						}
+					}
 				}
-			}
 			$formDescriptor['__qqconnect_flow'] = [
 				'type' => 'hidden',
 				'name' => '__qqconnect_flow',
