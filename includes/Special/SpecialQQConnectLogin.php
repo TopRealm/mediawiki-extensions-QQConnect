@@ -115,6 +115,24 @@ class SpecialQQConnectLogin extends SpecialPage {
 			return;
 		}
 
+		// -----------------------------------------------------------------
+		//  Form-submission routing via hidden marker fields.
+		//  HTMLForm's action URL is the bare page title (no query params),
+		//  so we cannot rely on ?action=… for POST requests.  Hidden fields
+		//  survive the POST and let execute() route correctly.
+		// -----------------------------------------------------------------
+		$qqFlow = $request->getRawVal( '__qqconnect_flow' );
+
+		if ( $qqFlow === 'link' ) {
+			$this->handleLinkForm();
+			return;
+		}
+
+		if ( $qqFlow === 'verify-bind' ) {
+			$this->handleVerifyBind();
+			return;
+		}
+
 		// An explicit ?action=test shows the test notice.
 		if ( $subPage === 'test' || $request->getRawVal( 'action' ) === 'test' ) {
 			$this->showTestMode();
@@ -545,6 +563,11 @@ class SpecialQQConnectLogin extends SpecialPage {
 				'name' => 'linkstep',
 				'default' => 'continue',
 			];
+			$formDescriptor['__qqconnect_flow'] = [
+				'type' => 'hidden',
+				'name' => '__qqconnect_flow',
+				'default' => 'link',
+			];
 		} else {
 			// Step 1: username + password.
 			$out->setPageTitleMsg( $this->msg( 'qqconnect-link-form-title' ) );
@@ -568,6 +591,11 @@ class SpecialQQConnectLogin extends SpecialPage {
 					'type' => 'hidden',
 					'name' => 'linkstep',
 					'default' => 'initial',
+				],
+				'__qqconnect_flow' => [
+					'type' => 'hidden',
+					'name' => '__qqconnect_flow',
+					'default' => 'link',
 				],
 			];
 		}
@@ -895,6 +923,11 @@ class SpecialQQConnectLogin extends SpecialPage {
 					$formDescriptor[$fieldName] = $fieldInfo;
 				}
 			}
+			$formDescriptor['__qqconnect_flow'] = [
+				'type' => 'hidden',
+				'name' => '__qqconnect_flow',
+				'default' => 'verify-bind',
+			];
 
 			$out = $this->getOutput();
 			$out->setPageTitleMsg( $this->msg( 'qqconnect-verify-bind-title' ) );
