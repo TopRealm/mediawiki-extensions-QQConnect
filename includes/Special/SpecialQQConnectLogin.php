@@ -183,7 +183,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 
 		$authorizeUrl = $this->client->getAuthorizeUrl( $redirectUri, $state );
 		$this->logger->info( 'Redirecting user to QQ authorize endpoint', [
-			'sessionId' => $session->getSessionId(),
+			'sessionId' => $session->getId(),
 		] );
 		$this->getOutput()->redirect( $authorizeUrl );
 	}
@@ -207,8 +207,8 @@ class SpecialQQConnectLogin extends SpecialPage {
 				'gotEmpty' => ( $gotState === '' ),
 				'stateLenExpected' => strlen( (string)$expectedState ),
 				'stateLenGot' => strlen( (string)$gotState ),
-				'sessionId' => $session->getSessionId(),
-				'sessionPersist' => $session->shouldPersist(),
+				'sessionId' => $session->getId(),
+				'sessionPersist' => $session->isPersistent(),
 				'hasReturnto' => $authManager->getAuthenticationSessionData( P::SESSION_KEY_RETURNTO, '' ) !== '',
 			] );
 			$debugInfo = null;
@@ -216,8 +216,8 @@ class SpecialQQConnectLogin extends SpecialPage {
 				$debugInfo = "state validation failed\n"
 					. "expected state present: " . ( $expectedState === '' ? 'no' : 'yes (len=' . strlen( (string)$expectedState ) . ')' ) . "\n"
 					. "state from QQ present: " . ( $gotState === '' ? 'no' : 'yes (len=' . strlen( (string)$gotState ) . ')' ) . "\n"
-					. "session ID: " . $session->getSessionId() . "\n"
-					. "session persist: " . ( $session->shouldPersist() ? 'yes' : 'no' ) . "\n"
+					. "session ID: " . $session->getId() . "\n"
+					. "session persist: " . ( $session->isPersistent() ? 'yes' : 'no' ) . "\n"
 					. "has returnTo URL: " . ( $authManager->getAuthenticationSessionData( P::SESSION_KEY_RETURNTO, '' ) !== '' ? 'yes' : 'no' );
 			}
 			$this->showError( 'qqconnect-error-invalid-state', $debugInfo );
