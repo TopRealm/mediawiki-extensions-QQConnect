@@ -125,11 +125,13 @@ class SpecialQQConnectLogin extends SpecialPage {
 		$qqFlow = $request->getRawVal( '__qqconnect_flow' );
 
 		if ( $qqFlow === 'link' ) {
+			$this->logger->warning( 'QQ execute: routing via __qqconnect_flow=link (POST)' );
 			$this->handleLinkForm();
 			return;
 		}
 
 		if ( $qqFlow === 'verify-bind' ) {
+			$this->logger->warning( 'QQ execute: routing via __qqconnect_flow=verify-bind (POST)' );
 			$this->handleVerifyBind();
 			return;
 		}
@@ -167,6 +169,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 			'QQConnect:linkAuthState', null
 		);
 		if ( $linkAuthState !== null ) {
+			$this->logger->warning( 'QQ execute: linkAuthState present, redirecting to ?action=link' );
 			$this->getOutput()->redirect(
 				$this->getPageTitle()->getLocalURL( [ 'action' => 'link' ] )
 			);
@@ -180,6 +183,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 			'QQConnect:pendingBind', null
 		);
 		if ( $pendingBind !== null ) {
+			$this->logger->warning( 'QQ execute: pendingBind present, redirecting to ?action=verify-bind' );
 			$this->getOutput()->redirect(
 				$this->getPageTitle()->getLocalURL( [ 'action' => 'verify-bind' ] )
 			);
@@ -187,6 +191,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 		}
 
 		// Default: start the OAuth flow (or show test mode).
+		$this->logger->warning( 'QQ execute: no state detected, calling startFlow()' );
 		$this->startFlow();
 	}
 
@@ -560,9 +565,11 @@ class SpecialQQConnectLogin extends SpecialPage {
 			$authManager = MediaWikiServices::getInstance()->getAuthManager();
 			$linkAuthState = $authManager->getAuthenticationSessionData( 'QQConnect:linkAuthState', null );
 
-			// beginAuthentication() (called by onLinkSubmit in step 1) wipes
-			// QQConnect:pending from the session.  If we are in step 2, the
-			// pending data was stashed inside linkAuthState — retrieve it
+		$this->logger->warning( 'QQ handleLinkForm: pending={pending}, linkAuthState={hasLinkAuth}', [
+			'pending' => $pending !== null ? 'yes' : 'no',
+			'hasLinkAuth' => $linkAuthState !== null ? 'yes' : 'no',
+			'sessionId' => $this->getRequest()->getSession()->getId(),
+		] );
 			// from there so the 2FA form can still display the QQ nickname.
 			if ( $pending === null && $linkAuthState !== null ) {
 				$pending = $linkAuthState['pending'] ?? null;
@@ -808,6 +815,11 @@ class SpecialQQConnectLogin extends SpecialPage {
 			$this->getFullTitle()->getFullURL()
 		);
 
+		$this->logger->warning( 'QQ link step1 beginAuthentication result: {status}', [
+			'status' => $response->status,
+			'username' => $username,
+		] );
+
 		if ( $response->status === AuthenticationResponse::PASS ) {
 			return $this->completeLinkBind(
 				$authManager, $pending, $response->username
@@ -831,6 +843,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 				$authManager->setAuthenticationSessionData( 'QQConnect:linkAuthState', [
 					'pending' => $pending,
 				] );
+				$this->logger->warning( 'QQ link step1 UI: linkAuthState with pending set, saving session' );
 				// Force session persist before HTMLForm redirect.
 				$this->getRequest()->getSession()->save();
 				// Return good so HTMLForm redirects to the same page; on the
