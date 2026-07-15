@@ -230,7 +230,13 @@ class QQClient {
 		}
 		$data = json_decode( $trimmed, true );
 		if ( !is_array( $data ) ) {
-			throw new QQConnectException( $stage, 'invalid response: ' . substr( $body, 0, 200 ) );
+			// Do NOT include the raw body in the exception message —
+			// it may contain access tokens in urlencoded token responses.
+			throw new QQConnectException(
+				$stage,
+				'unexpected response format (expected JSON, got: '
+					. substr( preg_replace( '/\s+/', ' ', $trimmed ), 0, 80 ) . ')'
+			);
 		}
 		return $data;
 	}

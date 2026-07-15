@@ -14,6 +14,7 @@
 	"qqconnect-config-testmode-desc": "Description of $wgQQConnectTestMode.",
 	"qqconnect-config-requirebind-desc": "Description of $wgQQConnectRequireBind.",
 	"qqconnect-config-scopes-desc": "Description of $wgQQConnectScopes.",
+	"qqconnect-config-debug-desc": "Description of $wgQQConnectDebug.",
 
 	"qqconnect-login-button": "Label of the QQ login button on the login form.",
 	"qqconnect-loginbutton-help": "Help text for the QQ login button.",
@@ -110,5 +111,7 @@
 	"qqconnect-logentry-bind": "Log entry; user is the subject.",
 	"qqconnect-logentry-unbind": "Log entry; user is the subject.",
 	"qqconnect-logentry-rebind": "Log entry; user is the subject.",
-	"qqconnect-logentry-admin-unbind": "Log entry; $1 is the target user."
+	"qqconnect-logentry-admin-unbind": "Log entry; $1 is the target user.",
+
+	"qqconnect-debug-title": "Heading shown above debug details on error pages when debug mode is on."
 }

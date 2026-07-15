@@ -81,6 +81,13 @@ class QQConnectConfig {
 	}
 
 	/**
+	 * @return bool Whether debug mode is enabled (shows diagnostic details on error pages).
+	 */
+	public function isDebugMode(): bool {
+		return (bool)$this->get( 'QQConnectDebug', false );
+	}
+
+	/**
 	 * @param string $key
 	 * @param mixed $default
 	 * @return mixed

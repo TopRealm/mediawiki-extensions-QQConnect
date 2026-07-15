@@ -15,6 +15,7 @@
 	"qqconnect-config-testmode-desc": "Placeholder test mode toggle.",
 	"qqconnect-config-requirebind-desc": "Require QQ binding to edit.",
 	"qqconnect-config-scopes-desc": "Comma-separated QQ Connect API scopes.",
+	"qqconnect-config-debug-desc": "Debug mode toggle. When enabled, diagnostic details (without tokens/secrets) are shown on login error pages. Only enable temporarily for troubleshooting.",
 
 	"qqconnect-login-button": "Log in with QQ",
 	"qqconnect-loginbutton-help": "Log in using your QQ account",
@@ -111,5 +112,7 @@
 	"qqconnect-logentry-bind": "bound their MediaWiki account to a QQ account",
 	"qqconnect-logentry-unbind": "unbound their MediaWiki account from a QQ account",
 	"qqconnect-logentry-rebind": "changed the QQ account bound to their MediaWiki account",
-	"qqconnect-logentry-admin-unbind": "force-unbound QQ account from user $1"
+	"qqconnect-logentry-admin-unbind": "force-unbound QQ account from user $1",
+
+	"qqconnect-debug-title": "Debug information (visible only when $wgQQConnectDebug = true):"
 }

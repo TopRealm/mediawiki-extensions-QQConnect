@@ -172,8 +172,19 @@ class SpecialQQConnectLogin extends SpecialPage {
 		$authManager->setAuthenticationSessionData( P::SESSION_KEY_STATE, $state );
 		$authManager->setAuthenticationSessionData( P::SESSION_KEY_REDIRECT, $redirectUri );
 
+		// Force the session to be persisted before the browser is redirected
+		// to QQ. Without this, some session backends may not flush the state
+		// in time for the OAuth callback, causing "invalid state" errors.
+		// @see https://phabricator.wikimedia.org/T147161 (session race with redirect)
+		$session = $this->getRequest()->getSession();
+		if ( method_exists( $session, 'save' ) ) {
+			$session->save();
+		}
+
 		$authorizeUrl = $this->client->getAuthorizeUrl( $redirectUri, $state );
-		$this->logger->info( 'Redirecting user to QQ authorize endpoint' );
+		$this->logger->info( 'Redirecting user to QQ authorize endpoint', [
+			'sessionId' => $session->getSessionId(),
+		] );
 		$this->getOutput()->redirect( $authorizeUrl );
 	}
 
@@ -183,15 +194,36 @@ class SpecialQQConnectLogin extends SpecialPage {
 	private function handleCallback() {
 		$request = $this->getRequest();
 		$authManager = MediaWikiServices::getInstance()->getAuthManager();
+		$session = $request->getSession();
 
 		// Verify state to prevent CSRF.
 		$expectedState = $authManager->getAuthenticationSessionData( P::SESSION_KEY_STATE, '' );
 		$gotState = $request->getRawVal( 'state', '' );
+
 		if ( $expectedState === '' || !hash_equals( (string)$expectedState, (string)$gotState ) ) {
-			$this->showError( 'qqconnect-error-invalid-state' );
+			// Log diagnostic info to help debug session-loss issues.
+			$this->logger->warning( 'QQ callback state mismatch', [
+				'expectedEmpty' => ( $expectedState === '' ),
+				'gotEmpty' => ( $gotState === '' ),
+				'stateLenExpected' => strlen( (string)$expectedState ),
+				'stateLenGot' => strlen( (string)$gotState ),
+				'sessionId' => $session->getSessionId(),
+				'sessionPersist' => $session->shouldPersist(),
+				'hasReturnto' => $authManager->getAuthenticationSessionData( P::SESSION_KEY_RETURNTO, '' ) !== '',
+			] );
+			$debugInfo = null;
+			if ( $this->config->isDebugMode() ) {
+				$debugInfo = "state validation failed\n"
+					. "expected state present: " . ( $expectedState === '' ? 'no' : 'yes (len=' . strlen( (string)$expectedState ) . ')' ) . "\n"
+					. "state from QQ present: " . ( $gotState === '' ? 'no' : 'yes (len=' . strlen( (string)$gotState ) . ')' ) . "\n"
+					. "session ID: " . $session->getSessionId() . "\n"
+					. "session persist: " . ( $session->shouldPersist() ? 'yes' : 'no' ) . "\n"
+					. "has returnTo URL: " . ( $authManager->getAuthenticationSessionData( P::SESSION_KEY_RETURNTO, '' ) !== '' ? 'yes' : 'no' );
+			}
+			$this->showError( 'qqconnect-error-invalid-state', $debugInfo );
 			return;
 		}
-		// Consume the state.
+		// Consume the state only after successful verification.
 		$authManager->removeAuthenticationSessionData( P::SESSION_KEY_STATE );
 
 		$redirectUri = $authManager->getAuthenticationSessionData( P::SESSION_KEY_REDIRECT, '' );
@@ -201,7 +233,12 @@ class SpecialQQConnectLogin extends SpecialPage {
 
 		$code = $request->getRawVal( 'code' );
 		if ( $code === null || $code === '' ) {
-			$this->showError( 'qqconnect-error-no-code' );
+			$debugInfo = null;
+			if ( $this->config->isDebugMode() ) {
+				$debugInfo = "no authorization code in callback URL\n"
+					. "this usually means QQ denied authorization or had an internal error";
+			}
+			$this->showError( 'qqconnect-error-no-code', $debugInfo );
 			return;
 		}
 
@@ -216,7 +253,11 @@ class SpecialQQConnectLogin extends SpecialPage {
 				'stage' => $e->getStage(),
 				'msg' => $e->getMessage(),
 			] );
-			$this->showError( $e->getErrorMessageKey() );
+			$debugInfo = null;
+			if ( $this->config->isDebugMode() ) {
+				$debugInfo = $e->getDebugMessage();
+			}
+			$this->showError( $e->getErrorMessageKey(), $debugInfo );
 			return;
 		}
 
@@ -522,11 +563,23 @@ class SpecialQQConnectLogin extends SpecialPage {
 	 * Show an error message.
 	 *
 	 * @param string $messageKey
+	 * @param string|null $debugInfo Safe debug details shown only when
+	 *   $wgQQConnectDebug is true. Must NOT contain tokens or secrets.
 	 */
-	private function showError( string $messageKey ) {
+	private function showError( string $messageKey, ?string $debugInfo = null ) {
 		$out = $this->getOutput();
 		$out->setPageTitleMsg( $this->msg( 'qqconnect-special-login-title' ) );
 		$out->addWikiMsg( $messageKey );
+		if ( $debugInfo !== null && $this->config->isDebugMode() ) {
+			$out->addHTML(
+				'<div class="qqconnect-debug-info" style="margin-top:1.5em;padding:0.8em;'
+				. 'background:#fef6e7;border:1px solid #fc3;font-size:0.875em;">'
+				. '<strong>' . $this->msg( 'qqconnect-debug-title' )->escaped() . '</strong>'
+				. '<pre style="margin:0.5em 0 0 0;white-space:pre-wrap;word-break:break-all;">'
+				. htmlspecialchars( $debugInfo )
+				. '</pre></div>'
+			);
+		}
 		$out->addReturnTo( Title::newMainPage() );
 	}
 

@@ -60,6 +60,12 @@
 			"description": "Comma-separated list of QQ Connect API scopes to request.",
 			"descriptionmsg": "qqconnect-config-scopes-desc",
 			"public": true
+		},
+		"QQConnectDebug": {
+			"value": false,
+			"description": "When true, detailed diagnostic information is shown on error pages (OAuth stage, sanitized reason). Keep false in production to avoid leaking internal details to end users.",
+			"descriptionmsg": "qqconnect-config-debug-desc",
+			"public": true
 		}
 	},
 	"SpecialPages": {
