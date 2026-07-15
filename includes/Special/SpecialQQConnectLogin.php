@@ -540,22 +540,36 @@ class SpecialQQConnectLogin extends SpecialPage {
 	 * fields obtained from AuthManager's continue-flow.
 	 */
 	private function handleLinkForm() {
-		$pending = $this->getPending();
-		if ( $pending === null ) {
-			$this->showError( 'qqconnect-error-invalid-state' );
-			return;
-		}
+			$pending = $this->getPending();
+			$authManager = MediaWikiServices::getInstance()->getAuthManager();
+			$linkAuthState = $authManager->getAuthenticationSessionData( 'QQConnect:linkAuthState', null );
 
-		$authManager = MediaWikiServices::getInstance()->getAuthManager();
-		$linkAuthState = $authManager->getAuthenticationSessionData( 'QQConnect:linkAuthState', null );
+			// beginAuthentication() (called by onLinkSubmit in step 1) wipes
+			// QQConnect:pending from the session.  If we are in step 2, the
+			// pending data was stashed inside linkAuthState — retrieve it
+			// from there so the 2FA form can still display the QQ nickname.
+			if ( $pending === null && $linkAuthState !== null ) {
+				$pending = $linkAuthState['pending'] ?? null;
+			}
 
-		$out = $this->getOutput();
+			if ( $pending === null ) {
+				$this->showError( 'qqconnect-error-invalid-state' );
+				return;
+			}
+
+			$out = $this->getOutput();
 
 		if ( $linkAuthState !== null ) {
-			// Step 2: secondary authentication (e.g. OATHAuth TOTP).
-			$out->setPageTitleMsg( $this->msg( 'qqconnect-link-form-title' ) );
-			$out->addWikiMsg( 'qqconnect-link-form-2fa-intro',
-				$pending['nickname'] ?? $pending['unionid'] );
+				// Step 2: secondary authentication (e.g. OATHAuth TOTP).
+				//
+				// The pending QQ identity was wiped from the session by
+				// beginAuthentication(), but onLinkSubmit() stashed a copy
+				// inside linkAuthState.  Use that copy so we can still
+				// display the QQ nickname in the 2FA prompt.
+				$step2pending = $linkAuthState['pending'] ?? $pending;
+				$out->setPageTitleMsg( $this->msg( 'qqconnect-link-form-title' ) );
+				$out->addWikiMsg( 'qqconnect-link-form-2fa-intro',
+					$step2pending['nickname'] ?? $step2pending['unionid'] );
 
 			$formDescriptor = $linkAuthState['neededFields'];
 			$formDescriptor['linkstep'] = [
@@ -613,35 +627,50 @@ class SpecialQQConnectLogin extends SpecialPage {
 	 * @return StatusValue
 	 */
 	public function onLinkSubmit( array $data ) {
-		$pending = $this->getPending();
-		if ( $pending === null ) {
-			return StatusValue::newFatal( 'qqconnect-error-invalid-state' );
-		}
+			$pending = $this->getPending();
+			$authManager = MediaWikiServices::getInstance()->getAuthManager();
+			$step = $data['linkstep'] ?? 'initial';
 
-		$authManager = MediaWikiServices::getInstance()->getAuthManager();
-		$step = $data['linkstep'] ?? 'initial';
+			// For step 2 (continue), the pending QQ identity was wiped from
+			// the session by beginAuthentication() in step 1.  Retrieve it
+			// from linkAuthState where onLinkSubmit stashed a copy.
+			if ( $pending === null && $step === 'continue' ) {
+				$linkAuthState = $authManager->getAuthenticationSessionData(
+					'QQConnect:linkAuthState', null
+				);
+				$pending = $linkAuthState['pending'] ?? null;
+			}
 
-		// -----------------------------------------------------------------
-		//  Step 2: continue after secondary (2FA) input
-		// -----------------------------------------------------------------
-		if ( $step === 'continue' ) {
-			$linkAuthState = $authManager->getAuthenticationSessionData(
-				'QQConnect:linkAuthState', null
-			);
-			if ( $linkAuthState === null ) {
+			if ( $pending === null ) {
 				return StatusValue::newFatal( 'qqconnect-error-invalid-state' );
 			}
 
-			$reqs = $authManager->getAuthenticationRequests( AuthManager::ACTION_LOGIN );
-			$loadedReqs = AuthenticationRequest::loadRequestsFromSubmission( $reqs, $data );
-			$response = $authManager->continueAuthentication( $loadedReqs );
-
-			if ( $response->status === AuthenticationResponse::PASS ) {
-				$authManager->removeAuthenticationSessionData( 'QQConnect:linkAuthState' );
-				return $this->completeLinkBind(
-					$authManager, $pending, $response->username
+		// -----------------------------------------------------------------
+			//  Step 2: continue after secondary (2FA) input
+			// -----------------------------------------------------------------
+			if ( $step === 'continue' ) {
+				$linkAuthState = $authManager->getAuthenticationSessionData(
+					'QQConnect:linkAuthState', null
 				);
-			}
+				if ( $linkAuthState === null ) {
+					return StatusValue::newFatal( 'qqconnect-error-invalid-state' );
+				}
+
+				// The pending QQ identity was wiped from the session by
+				// beginAuthentication() in step 1.  Retrieve it from the
+				// copy we stashed inside linkAuthState.
+				$bindPending = $linkAuthState['pending'] ?? $pending;
+
+				$reqs = $authManager->getAuthenticationRequests( AuthManager::ACTION_LOGIN );
+				$loadedReqs = AuthenticationRequest::loadRequestsFromSubmission( $reqs, $data );
+				$response = $authManager->continueAuthentication( $loadedReqs );
+
+				if ( $response->status === AuthenticationResponse::PASS ) {
+					$authManager->removeAuthenticationSessionData( 'QQConnect:linkAuthState' );
+					return $this->completeLinkBind(
+						$authManager, $bindPending, $response->username
+					);
+				}
 
 			if ( $response->status === AuthenticationResponse::UI ) {
 				// Still need more input (e.g. backup recovery code after
@@ -653,8 +682,12 @@ class SpecialQQConnectLogin extends SpecialPage {
 						$neededFields[$fieldName] = $fieldInfo;
 					}
 				}
+				// Preserve the pending QQ identity alongside the updated
+				// field descriptors so repeated 2FA attempts (e.g. wrong
+				// TOTP, then recovery code) do not lose the bind target.
 				$authManager->setAuthenticationSessionData( 'QQConnect:linkAuthState', [
 					'neededFields' => $neededFields,
+					'pending' => $linkAuthState['pending'] ?? null,
 				] );
 				$this->getRequest()->getSession()->save();
 				return StatusValue::newGood();
@@ -662,7 +695,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 
 			$authManager->removeAuthenticationSessionData( 'QQConnect:linkAuthState' );
 			return StatusValue::newFatal( 'qqconnect-error-auth-failed' );
-		}
+			}
 
 		// -----------------------------------------------------------------
 		//  Step 1: verify username + password via beginAuthentication
@@ -690,20 +723,29 @@ class SpecialQQConnectLogin extends SpecialPage {
 			);
 		}
 
-		if ( $response->status === AuthenticationResponse::UI ) {
-			// Credentials are correct but a secondary provider (e.g.
-			// OATHAuth) requires additional input. Extract the needed
-			// form fields and stash them so handleLinkForm renders the
-			// 2FA step.
-			$neededFields = [];
-			foreach ( $response->neededRequests as $req ) {
-				foreach ( $req->getFieldInfo() as $fieldName => $fieldInfo ) {
-					$neededFields[$fieldName] = $fieldInfo;
+			if ( $response->status === AuthenticationResponse::UI ) {
+				// Credentials are correct but a secondary provider (e.g.
+				// OATHAuth) requires additional input. Extract the needed
+				// form fields and stash them so handleLinkForm renders the
+				// 2FA step.
+				//
+				// IMPORTANT: beginAuthentication() internally calls
+				// removeAuthenticationSessionData(null) which wipes all
+				// custom auth session data INCLUDING QQConnect:pending.
+				// We MUST stash the pending data here alongside the 2FA
+				// field descriptors so that subsequent requests (step 2
+				// rendering and submission) can still access the QQ
+				// identity that is being bound.
+				$neededFields = [];
+				foreach ( $response->neededRequests as $req ) {
+					foreach ( $req->getFieldInfo() as $fieldName => $fieldInfo ) {
+						$neededFields[$fieldName] = $fieldInfo;
+					}
 				}
-			}
-			$authManager->setAuthenticationSessionData( 'QQConnect:linkAuthState', [
-				'neededFields' => $neededFields,
-			] );
+				$authManager->setAuthenticationSessionData( 'QQConnect:linkAuthState', [
+					'neededFields' => $neededFields,
+					'pending' => $pending,
+				] );
 			// Force session persist before HTMLForm redirect.
 			$this->getRequest()->getSession()->save();
 			// Return good so HTMLForm redirects to the same page; on the
@@ -713,8 +755,11 @@ class SpecialQQConnectLogin extends SpecialPage {
 		}
 
 		// REDIRECT or FAIL.
-		return StatusValue::newFatal( 'qqconnect-error-auth-failed' );
-	}
+			// Restore the pending QQ identity so the user can retry after a
+			// page refresh rather than being stuck on "invalid session".
+			$authManager->setAuthenticationSessionData( P::SESSION_KEY_PENDING, $pending );
+			return StatusValue::newFatal( 'qqconnect-error-auth-failed' );
+			}
 
 	/**
 	 * Complete the bind after AuthManager has authenticated the user (either
