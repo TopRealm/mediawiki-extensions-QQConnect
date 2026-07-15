@@ -98,6 +98,13 @@ class SpecialQQConnect extends SpecialPage {
 		}
 
 		// Default: show the management view.
+		// If we just completed an unbind, show the success message.
+		$authManager = MediaWikiServices::getInstance()->getAuthManager();
+		$unbindSuccess = $authManager->getAuthenticationSessionData( 'QQConnect:unbindSuccess', null );
+		if ( $unbindSuccess !== null ) {
+			$authManager->removeAuthenticationSessionData( 'QQConnect:unbindSuccess' );
+			$this->getOutput()->addWikiMsg( 'qqconnect-manage-unbind-success' );
+		}
 		$this->showManagePage( $binding );
 	}
 
@@ -256,7 +263,9 @@ class SpecialQQConnect extends SpecialPage {
 			$logEntry->setTarget( $this->getUser()->getUserPage() );
 			$logEntry->insert();
 
-			$this->getOutput()->addWikiMsg( 'qqconnect-manage-unbind-success' );
+			// Stash success flag so execute() shows the message.
+			MediaWikiServices::getInstance()->getAuthManager()
+				->setAuthenticationSessionData( 'QQConnect:unbindSuccess', true );
 		}
 		// MW 1.43 HTMLForm::show() does not redirect on newGood().
 		$this->getOutput()->redirect( $this->getPageTitle()->getFullURL() );

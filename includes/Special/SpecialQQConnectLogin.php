@@ -365,15 +365,6 @@ class SpecialQQConnectLogin extends SpecialPage {
 		$avatar = QQClient::pickAvatar( $userInfo );
 		$appid = $this->config->getAppId();
 
-		// The OAuth round-trip succeeded —the browser has returned from QQ.
-		// SESSION_KEY_RETURNTO was set by beginPrimaryAuthentication to
-		// remember the AuthManager continuation URL.  It is no longer
-		// needed and MUST be cleared now; otherwise a subsequent
-		// accidental hit of startFlow() (e.g. after a successful link-bind
-		// whose HTMLForm redirect lands here) would re-trigger a new QQ
-		// redirect because $hasAuthState would still be true.
-		$authManager->removeAuthenticationSessionData( P::SESSION_KEY_RETURNTO );
-
 		// Check for a "bind mode" flag (user is logged in and initiating a
 		// bind/rebind from Special:QQConnect).
 		$bindMode = $authManager->getAuthenticationSessionData( 'QQConnect:bindMode', null );
@@ -395,9 +386,16 @@ class SpecialQQConnectLogin extends SpecialPage {
 			$authManager->setAuthenticationSessionData( P::SESSION_KEY_RESULT, [
 				'username' => $username,
 			] );
+			// resumeLoginFlow() reads and deletes SESSION_KEY_RETURNTO
+			// internally — do NOT delete it here or the redirect target is lost.
 			$this->resumeLoginFlow();
 			return;
 		}
+
+		// Unbound QQ: stash pending identity and show the choose page.
+		// Clear SESSION_KEY_RETURNTO now so that a later accidental
+		// startFlow() does not re-trigger a new QQ redirect.
+		$authManager->removeAuthenticationSessionData( P::SESSION_KEY_RETURNTO );
 
 		// Unbound QQ: stash pending identity and show the choose page.
 		// Store in an independent session secret so beginAuthentication()

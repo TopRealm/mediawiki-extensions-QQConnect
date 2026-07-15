@@ -62,10 +62,11 @@ class HookHandler {
 	 * checkLoginSecurityLevel can trigger re-auth.
 	 */
 	public static function onExtensionFunction() {
-		// Security-sensitive operations are registered via a static config
-		// ($wgRateLimits / AuthManager), but for the re-auth prompt we rely on
-		// the default SEC_REAUTH behavior, which is automatic. No explicit
-		// registration is required in 1.43.
+		// Restrict the QQ Connect log to administrators (users with the
+		// 'qqconnect-manage' right).  The log contains QQ nicknames and
+		// binding timestamps, which is user-associated personal data.
+		global $wgLogRestrictions;
+		$wgLogRestrictions['qqconnect'] = 'qqconnect-manage';
 	}
 
 	/**
