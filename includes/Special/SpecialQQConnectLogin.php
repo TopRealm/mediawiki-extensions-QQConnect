@@ -140,6 +140,33 @@ class SpecialQQConnectLogin extends SpecialPage {
 			return;
 		}
 
+		// If the link-existing-account flow is in progress (step 2: waiting
+		// for 2FA input), HTMLForm's post-submit redirect may have landed
+		// here without ?action=link. Redirect back to the link form so the
+		// 2FA step is rendered instead of falling through to startFlow().
+		$linkAuthState = $authManager->getAuthenticationSessionData(
+			'QQConnect:linkAuthState', null
+		);
+		if ( $linkAuthState !== null ) {
+			$this->getOutput()->redirect(
+				$this->getPageTitle()->getLocalURL( [ 'action' => 'link' ] )
+			);
+			return;
+		}
+
+		// Same guard for the authenticated-user bind flow (Flow 2): when
+		// the 2FA form is re-rendered after a failed TOTP attempt,
+		// HTMLForm redirects here without ?action=verify-bind.
+		$pendingBind = $authManager->getAuthenticationSessionData(
+			'QQConnect:pendingBind', null
+		);
+		if ( $pendingBind !== null ) {
+			$this->getOutput()->redirect(
+				$this->getPageTitle()->getLocalURL( [ 'action' => 'verify-bind' ] )
+			);
+			return;
+		}
+
 		// Default: start the OAuth flow (or show test mode).
 		$this->startFlow();
 	}
