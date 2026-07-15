@@ -4,9 +4,9 @@
  *
  * All methods operate on the primary database (DB_PRIMARY) for writes and
  * replica (DB_REPLICA) for reads. The table maps MediaWiki user_id <-> a
- * (QQ OpenID, APPID) pair. Invariants enforced by the schema:
- *   - one MediaWiki user  -> at most one QQ binding (PK on qqc_user)
- *   - one (OpenID, APPID) -> at most one MediaWiki user (unique index)
+ * QQ UnionID. Invariants enforced by the schema:
+ *   - one MediaWiki user -> at most one QQ binding (PK on qqc_user)
+ *   - one QQ UnionID    -> at most one MediaWiki user (unique index)
  */
 
 namespace MediaWiki\Extension\QQConnect;
@@ -57,22 +57,18 @@ class QQStore {
 	}
 
 	/**
-	 * Find the MediaWiki user bound to a given QQ OpenID/APPID.
+	 * Find the MediaWiki user bound to the given QQ UnionID.
 	 *
-	 * @param string $openid
-	 * @param string $appid
-	 * @return array|null Associative row (qqc_user, qqc_openid, qqc_appid,
+	 * @param string $unionid
+	 * @return array|null Associative row (qqc_user, qqc_unionid, qqc_appid,
 	 *    qqc_nickname, qqc_avatar, qqc_bound_timestamp) or null if not bound.
 	 */
-	public function findBindingByOpenid( string $openid, string $appid ): ?array {
+	public function findBindingByUnionid( string $unionid ): ?array {
 		$db = $this->getReplicaDb();
 		$row = $db->selectRow(
 			self::TABLE,
 			'*',
-			[
-				'qqc_openid' => $openid,
-				'qqc_appid' => $appid,
-			],
+			[ 'qqc_unionid' => $unionid ],
 			__METHOD__
 		);
 		return $row ? (array)$row : null;
@@ -96,14 +92,13 @@ class QQStore {
 	}
 
 	/**
-	 * Returns true if a QQ OpenID is already bound to some account.
+	 * Returns true if a QQ UnionID is already bound to some account.
 	 *
-	 * @param string $openid
-	 * @param string $appid
+	 * @param string $unionid
 	 * @return bool
 	 */
-	public function openidIsBound( string $openid, string $appid ): bool {
-		return $this->findBindingByOpenid( $openid, $appid ) !== null;
+	public function unionidIsBound( string $unionid ): bool {
+		return $this->findBindingByUnionid( $unionid ) !== null;
 	}
 
 	/**
@@ -118,23 +113,22 @@ class QQStore {
 
 	/**
 	 * Bind a QQ account to a MediaWiki user. Assumes the caller has already
-	 * verified that neither side is currently bound to another record of the
-	 * opposite side (see openidIsBound / userIsBound).
+	 * verified that neither side is currently bound to another record.
 	 *
 	 * @param int $userId
-	 * @param string $openid
-	 * @param string $appid
+	 * @param string $unionid
+	 * @param string $appid (for audit only)
 	 * @param string $nickname
 	 * @param string $avatar
 	 * @return bool True on success.
 	 */
-	public function bind( int $userId, string $openid, string $appid, string $nickname, string $avatar ): bool {
+	public function bind( int $userId, string $unionid, string $appid, string $nickname, string $avatar ): bool {
 		$db = $this->getPrimaryDb();
 		$db->insert(
 			self::TABLE,
 			[
 				'qqc_user' => $userId,
-				'qqc_openid' => $openid,
+				'qqc_unionid' => $unionid,
 				'qqc_appid' => $appid,
 				'qqc_nickname' => $nickname !== '' ? $nickname : null,
 				'qqc_avatar' => $avatar !== '' ? $avatar : null,
@@ -168,7 +162,7 @@ class QQStore {
 	 * atomicity.
 	 *
 	 * @param int $userId
-	 * @param string $openid
+	 * @param string $unionid
 	 * @param string $appid
 	 * @param string $nickname
 	 * @param string $avatar
@@ -176,7 +170,7 @@ class QQStore {
 	 */
 	public function rebind(
 		int $userId,
-		string $openid,
+		string $unionid,
 		string $appid,
 		string $nickname,
 		string $avatar
@@ -190,7 +184,7 @@ class QQStore {
 				self::TABLE,
 				[
 					'qqc_user' => $userId,
-					'qqc_openid' => $openid,
+					'qqc_unionid' => $unionid,
 					'qqc_appid' => $appid,
 					'qqc_nickname' => $nickname !== '' ? $nickname : null,
 					'qqc_avatar' => $avatar !== '' ? $avatar : null,
@@ -226,7 +220,7 @@ class QQStore {
 			[ self::TABLE, 'user' ],
 			[
 				'qqc_user',
-				'qqc_openid',
+				'qqc_unionid',
 				'qqc_appid',
 				'qqc_nickname',
 				'qqc_avatar',

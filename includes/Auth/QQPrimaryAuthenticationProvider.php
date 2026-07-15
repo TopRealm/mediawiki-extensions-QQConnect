@@ -20,7 +20,7 @@
  *  - For an already-bound QQ user: continuePrimaryAuthentication returns
  *    newPass( $existingUsername ). AuthManager logs them in, and OATHAuth's
  *    secondary challenge runs automatically (2FA is NOT bypassed).
- *  - For an unbound QQ user: the OAuth result (openid + userinfo) is stashed
+ *  - For an unbound QQ user: the OAuth result (unionid + userinfo) is stashed
  *    in the session, and the user is sent to Special:QQConnectLogin to choose
  *    "create new account" (which routes through normal Special:CreateAccount,
  *    running all PreAuth checks; the binding is completed in the

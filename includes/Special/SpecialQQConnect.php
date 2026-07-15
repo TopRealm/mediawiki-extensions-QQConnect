@@ -3,7 +3,7 @@
  * Special:QQConnect — the user-facing QQ account management page.
  *
  * Lets a logged-in user:
- *  - View their currently bound QQ account (nickname, openid, avatar, time).
+ *  - View their currently bound QQ account (nickname, unionid, avatar, time).
  *  - Bind a QQ account (if not bound).
  *  - Change (rebind) their bound QQ account (starts a fresh OAuth flow;
  *    on success the old binding is replaced).
@@ -106,7 +106,7 @@ class SpecialQQConnect extends SpecialPage {
 		if ( $binding ) {
 			// Show bound QQ details.
 			$nickname = $binding['qqc_nickname'] ?? '';
-			$openid = $binding['qqc_openid'] ?? '';
+			$unionid = $binding['qqc_unionid'] ?? '';
 			$avatar = $binding['qqc_avatar'] ?? '';
 			$boundTs = $binding['qqc_bound_timestamp'] ?? '';
 
@@ -124,7 +124,7 @@ class SpecialQQConnect extends SpecialPage {
 					->params( htmlspecialchars( $nickname ) )->escaped() . '</li>';
 			}
 			$info .= '<li>' . $this->msg( 'qqconnect-manage-openid' )
-				->params( htmlspecialchars( $openid ) )->escaped() . '</li>';
+				->params( htmlspecialchars( $unionid ) )->escaped() . '</li>';
 			if ( $boundTs ) {
 				$info .= '<li>' . $this->msg( 'qqconnect-manage-bound-time' )
 					->params( htmlspecialchars( $this->getLanguage()->userTimeAndDate( $boundTs, $this->getUser() ) ) )

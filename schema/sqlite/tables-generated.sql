@@ -4,11 +4,11 @@
 -- See https://www.mediawiki.org/wiki/Manual:Schema_changes
 CREATE TABLE /*_*/qqconnect_users (
   qqc_user INTEGER UNSIGNED NOT NULL,
-  qqc_openid BLOB NOT NULL,
+  qqc_unionid BLOB NOT NULL,
   qqc_appid BLOB NOT NULL,
   qqc_nickname BLOB DEFAULT NULL,
   qqc_avatar BLOB DEFAULT NULL,
   qqc_bound_timestamp BLOB NOT NULL,
   PRIMARY KEY (qqc_user)
 );
-CREATE UNIQUE INDEX qqc_openid_appid ON qqconnect_users (qqc_openid, qqc_appid);
+CREATE UNIQUE INDEX qqc_unionid_unique ON qqconnect_users (qqc_unionid);

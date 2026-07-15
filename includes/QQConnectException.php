@@ -16,7 +16,7 @@ class QQConnectException extends Exception {
 	private $stage;
 
 	/**
-	 * @param string $stage One of: 'http', 'token', 'openid', 'userinfo'.
+	 * @param string $stage One of: 'http', 'token', 'openid', 'unionid', 'userinfo'.
 	 * @param string $message
 	 * @param int $code
 	 * @param Exception|null $previous
@@ -43,6 +43,7 @@ class QQConnectException extends Exception {
 			case 'token':
 				return 'qqconnect-error-token';
 			case 'openid':
+			case 'unionid':
 				return 'qqconnect-error-openid';
 			case 'userinfo':
 				return 'qqconnect-error-userinfo';
@@ -62,6 +63,8 @@ class QQConnectException extends Exception {
 				return 'token (exchange code → access_token)';
 			case 'openid':
 				return 'openid (get QQ OpenID)';
+			case 'unionid':
+				return 'unionid (get QQ UnionID)';
 			case 'userinfo':
 				return 'userinfo (get QQ profile)';
 			case 'http':

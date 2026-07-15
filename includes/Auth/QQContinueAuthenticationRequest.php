@@ -6,7 +6,7 @@
  * When the QQ primary provider returns an AuthenticationResponse::newRedirect
  * pointing at Special:QQConnectLogin, core stores the list of "needed
  * requests" to resume the flow. After the special page finishes the OAuth
- * dance (exchanging code for token, fetching openid/userinfo), it triggers
+ * dance (exchanging code for token, fetching unionid/userinfo), it triggers
  * continuePrimaryAuthentication by submitting an instance of this class,
  * carrying the resolved local username (or leaving it empty to signal
  * failure / a choice-required state).

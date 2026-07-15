@@ -116,7 +116,7 @@ class SpecialQQConnectAdmin extends SpecialPage {
 
 		foreach ( $bindings as $row ) {
 			$username = $row['user_name'] ?? ( '#' . $row['qqc_user'] );
-			$openid = $row['qqc_openid'] ?? '';
+			$unionid = $row['qqc_unionid'] ?? '';
 			$nickname = $row['qqc_nickname'] ?? '';
 			$boundTs = $row['qqc_bound_timestamp'] ?? '';
 			$boundDisplay = $boundTs
@@ -129,7 +129,7 @@ class SpecialQQConnectAdmin extends SpecialPage {
 
 			$html .= '<tr>';
 			$html .= '<td>' . htmlspecialchars( $username ) . '</td>';
-			$html .= '<td><code>' . htmlspecialchars( $openid ) . '</code></td>';
+			$html .= '<td><code>' . htmlspecialchars( $unionid ) . '</code></td>';
 			$html .= '<td>' . htmlspecialchars( $nickname ) . '</td>';
 			$html .= '<td>' . $boundDisplay . '</td>';
 			$html .= '<td><a class="mw-ui-button mw-ui-destructive qqconnect-admin-unbind" href="'

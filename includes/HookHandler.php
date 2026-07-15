@@ -129,7 +129,7 @@ class HookHandler {
 		$binding = $this->store->findBindingByUser( $user->getId() );
 
 		if ( $binding ) {
-			$nickname = $binding['qqc_nickname'] ?? $binding['qqc_openid'];
+			$nickname = $binding['qqc_nickname'] ?? $binding['qqc_unionid'];
 			// Use array format for label-message to pass $nickname as $1.
 			$preferences['qqconnect-bound'] = [
 				'type' => 'info',
@@ -187,25 +187,25 @@ class HookHandler {
 		}
 		// Verify the QQ isn't bound to another user (shouldn't happen since we
 		// just checked at callback time, but be safe).
-		if ( $this->store->openidIsBound( $pending['openid'], $pending['appid'] ) ) {
+		if ( $this->store->unionidIsBound( $pending['unionid'] ) ) {
 			$this->logger->warning(
-				'Cannot bind pending QQ {openid} to new user {user}: openid already bound',
-				[ 'openid' => $pending['openid'], 'user' => $user->getName() ]
+				'Cannot bind pending QQ {unionid} to new user {user}: unionid already bound',
+				[ 'unionid' => $pending['unionid'], 'user' => $user->getName() ]
 			);
 			$authManager->removeAuthenticationSessionData( P::SESSION_KEY_PENDING );
 			return;
 		}
 		$ok = $this->store->bind(
 			$user->getId(),
-			$pending['openid'],
+			$pending['unionid'],
 			$pending['appid'],
 			$pending['nickname'] ?? '',
 			$pending['avatar'] ?? ''
 		);
 		if ( $ok ) {
 			$this->logger->info(
-				'Bound pending QQ {openid} to newly created user {user}',
-				[ 'openid' => $pending['openid'], 'user' => $user->getName() ]
+				'Bound pending QQ {unionid} to newly created user {user}',
+				[ 'unionid' => $pending['unionid'], 'user' => $user->getName() ]
 			);
 		}
 		$authManager->removeAuthenticationSessionData( P::SESSION_KEY_PENDING );

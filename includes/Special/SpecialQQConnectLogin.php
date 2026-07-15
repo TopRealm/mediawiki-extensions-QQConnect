@@ -7,7 +7,7 @@
  *     review, but no real OAuth runs).
  *  2. Otherwise, redirect the browser to QQ's authorize endpoint.
  *  3. Receive the QQ callback (?code=...&state=...), verify state, exchange
- *     the code for a token, fetch openid + userinfo.
+ *     the code for a token, fetch identity (openid + unionid) + userinfo.
  *  4. If the QQ is already bound to a MediaWiki user: stash the username and
  *     redirect back into the AuthManager login flow (the primary provider's
  *     continuePrimaryAuthentication returns newPass).
@@ -165,6 +165,17 @@ class SpecialQQConnectLogin extends SpecialPage {
 			return;
 		}
 
+		// Defensive check: if the user is already logged in (which can
+		// happen when a link-bind succeeded and HTMLForm's redirect landed
+		// here), do NOT start a new QQ OAuth flow.  Instead, redirect to
+		// the QQ management page so the user sees their newly-bound QQ.
+		if ( $this->getUser()->isRegistered() ) {
+			$this->getOutput()->redirect(
+				SpecialPage::getTitleFor( 'QQConnect' )->getFullURL()
+			);
+			return;
+		}
+
 		$authManager = MediaWikiServices::getInstance()->getAuthManager();
 		$bindMode = $authManager->getAuthenticationSessionData( 'QQConnect:bindMode', null );
 
@@ -267,8 +278,10 @@ class SpecialQQConnectLogin extends SpecialPage {
 		try {
 			$tokenData = $this->client->exchangeCodeForToken( $code, $redirectUri );
 			$accessToken = $tokenData['access_token'];
-			$openid = $this->client->getOpenid( $accessToken );
-			$userInfo = $this->client->getUserInfo( $accessToken, $openid );
+			$identity = $this->client->fetchIdentity( $accessToken );
+			$unionid = $identity['unionid'];
+			$openidForApi = $identity['openid'];
+			$userInfo = $this->client->getUserInfo( $accessToken, $openidForApi );
 		} catch ( QQConnectException $e ) {
 			$this->logger->error( 'QQ OAuth failed at {stage}: {msg}', [
 				'stage' => $e->getStage(),
@@ -286,16 +299,25 @@ class SpecialQQConnectLogin extends SpecialPage {
 		$avatar = QQClient::pickAvatar( $userInfo );
 		$appid = $this->config->getAppId();
 
+		// The OAuth round-trip succeeded — the browser has returned from QQ.
+		// SESSION_KEY_RETURNTO was set by beginPrimaryAuthentication to
+		// remember the AuthManager continuation URL.  It is no longer
+		// needed and MUST be cleared now; otherwise a subsequent
+		// accidental hit of startFlow() (e.g. after a successful link-bind
+		// whose HTMLForm redirect lands here) would re-trigger a new QQ
+		// redirect because $hasAuthState would still be true.
+		$authManager->removeAuthenticationSessionData( P::SESSION_KEY_RETURNTO );
+
 		// Check for a "bind mode" flag (user is logged in and initiating a
 		// bind/rebind from Special:QQConnect).
 		$bindMode = $authManager->getAuthenticationSessionData( 'QQConnect:bindMode', null );
 
 		// Is this QQ already bound to a MediaWiki user?
-		$binding = $this->store->findBindingByOpenid( $openid, $appid );
+		$binding = $this->store->findBindingByUnionid( $unionid );
 
 		if ( $bindMode !== null ) {
 			// Bind/rebind flow initiated by a logged-in user.
-			$this->handleBindModeCallback( $bindMode, $openid, $appid, $nickname, $avatar, $binding );
+			$this->handleBindModeCallback( $bindMode, $unionid, $appid, $nickname, $avatar, $binding );
 			return;
 		}
 
@@ -313,7 +335,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 
 		// Unbound QQ: stash pending identity and show the choose page.
 		$authManager->setAuthenticationSessionData( P::SESSION_KEY_PENDING, [
-			'openid' => $openid,
+			'unionid' => $unionid,
 			'appid' => $appid,
 			'nickname' => $nickname,
 			'avatar' => $avatar,
@@ -329,7 +351,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 	 * before completing the binding. Otherwise the bind is done directly.
 	 *
 	 * @param string $bindMode 'bind' or 'rebind'
-	 * @param string $openid
+	 * @param string $unionid
 	 * @param string $appid
 	 * @param string $nickname
 	 * @param string $avatar
@@ -337,7 +359,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 	 */
 	private function handleBindModeCallback(
 		string $bindMode,
-		string $openid,
+		string $unionid,
 		string $appid,
 		string $nickname,
 		string $avatar,
@@ -376,7 +398,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 			// verification page.
 			$authManager->setAuthenticationSessionData( 'QQConnect:pendingBind', [
 				'bindMode' => $bindMode,
-				'openid' => $openid,
+				'unionid' => $unionid,
 				'appid' => $appid,
 				'nickname' => $nickname,
 				'avatar' => $avatar,
@@ -393,7 +415,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 
 		// No secondary provider → bind directly.
 		$this->executeBind(
-			$bindMode, $user, $openid, $appid, $nickname, $avatar, $existingBinding
+			$bindMode, $user, $unionid, $appid, $nickname, $avatar, $existingBinding
 		);
 	}
 
@@ -456,7 +478,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 		// Pre-fill a username derived from the QQ nickname.
 		$cleaned = UsernameCleaner::clean( $pending['nickname'] ?? '' );
 		if ( $cleaned === '' ) {
-			$cleaned = UsernameCleaner::generateFromOpenid( $pending['openid'] );
+			$cleaned = UsernameCleaner::generateFromUnionid( $pending['unionid'] );
 		}
 		$title = SpecialPage::getTitleFor( 'CreateAccount' );
 		$url = $title->getFullURL( [
@@ -488,7 +510,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 			// Step 2: secondary authentication (e.g. OATHAuth TOTP).
 			$out->setPageTitleMsg( $this->msg( 'qqconnect-link-form-title' ) );
 			$out->addWikiMsg( 'qqconnect-link-form-2fa-intro',
-				$pending['nickname'] ?? $pending['openid'] );
+				$pending['nickname'] ?? $pending['unionid'] );
 
 			$formDescriptor = $linkAuthState['neededFields'];
 			$formDescriptor['linkstep'] = [
@@ -500,7 +522,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 			// Step 1: username + password.
 			$out->setPageTitleMsg( $this->msg( 'qqconnect-link-form-title' ) );
 			$out->addWikiMsg( 'qqconnect-link-form-intro',
-				$pending['nickname'] ?? $pending['openid'] );
+				$pending['nickname'] ?? $pending['unionid'] );
 
 			$formDescriptor = [
 				'username' => [
@@ -650,7 +672,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 		if ( !$boundUser || !$boundUser->getId() ) {
 			return StatusValue::newFatal( 'qqconnect-error-auth-failed' );
 		}
-		if ( $this->store->openidIsBound( $pending['openid'], $pending['appid'] ) ) {
+		if ( $this->store->unionidIsBound( $pending['unionid'] ) ) {
 			return StatusValue::newFatal( 'qqconnect-error-openid-bound-other' );
 		}
 		if ( $this->store->userIsBound( $boundUser->getId() ) ) {
@@ -658,7 +680,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 		}
 		$ok = $this->store->bind(
 			$boundUser->getId(),
-			$pending['openid'],
+			$pending['unionid'],
 			$pending['appid'],
 			$pending['nickname'] ?? '',
 			$pending['avatar'] ?? ''
@@ -723,6 +745,9 @@ class SpecialQQConnectLogin extends SpecialPage {
 	private function resumeLoginFlow() {
 		$authManager = MediaWikiServices::getInstance()->getAuthManager();
 		$returnToUrl = $authManager->getAuthenticationSessionData( P::SESSION_KEY_RETURNTO, '' );
+		// Consume the stashed URL — it must not survive into a later
+		// startFlow() call (which would re-trigger a QQ redirect).
+		$authManager->removeAuthenticationSessionData( P::SESSION_KEY_RETURNTO );
 		if ( $returnToUrl === '' ) {
 			// Session lost; fall back to the login page with an error.
 			$returnToUrl = SpecialPage::getTitleFor( 'Userlogin' )->getFullURL();
@@ -746,7 +771,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 	 *
 	 * @param string $bindMode 'bind' or 'rebind'
 	 * @param \MediaWiki\User\User $user
-	 * @param string $openid
+	 * @param string $unionid
 	 * @param string $appid
 	 * @param string $nickname
 	 * @param string $avatar
@@ -755,20 +780,20 @@ class SpecialQQConnectLogin extends SpecialPage {
 	private function executeBind(
 		string $bindMode,
 		User $user,
-		string $openid,
+		string $unionid,
 		string $appid,
 		string $nickname,
 		string $avatar,
 		?array $existingBinding
 	) {
 		if ( $bindMode === 'rebind' ) {
-			$ok = $this->store->rebind( $user->getId(), $openid, $appid, $nickname, $avatar );
+			$ok = $this->store->rebind( $user->getId(), $unionid, $appid, $nickname, $avatar );
 		} else {
 			if ( $this->store->userIsBound( $user->getId() ) ) {
 				$this->showError( 'qqconnect-error-user-bound-other' );
 				return;
 			}
-			$ok = $this->store->bind( $user->getId(), $openid, $appid, $nickname, $avatar );
+			$ok = $this->store->bind( $user->getId(), $unionid, $appid, $nickname, $avatar );
 		}
 
 		if ( !$ok ) {
@@ -828,7 +853,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 			$authManager->removeAuthenticationSessionData( 'QQConnect:bindSecondaryReqs' );
 			$this->executeBind(
 				$pendingBind['bindMode'], $user,
-				$pendingBind['openid'], $pendingBind['appid'],
+				$pendingBind['unionid'], $pendingBind['appid'],
 				$pendingBind['nickname'], $pendingBind['avatar'],
 				$pendingBind['existingBinding']
 			);
@@ -894,7 +919,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 			$authManager->removeAuthenticationSessionData( 'QQConnect:bindSecondaryReqs' );
 			$this->executeBind(
 				$pendingBind['bindMode'], $user,
-				$pendingBind['openid'], $pendingBind['appid'],
+				$pendingBind['unionid'], $pendingBind['appid'],
 				$pendingBind['nickname'], $pendingBind['avatar'],
 				$pendingBind['existingBinding']
 			);

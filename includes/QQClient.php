@@ -105,27 +105,49 @@ class QQClient {
 	}
 
 	/**
-	 * Retrieve the QQ OpenID for the given access token.
+	 * Retrieve the QQ identity (openid + unionid) for the given access token.
+	 *
+	 * Calls /oauth2.0/me?unionid=1 to obtain both identifiers in one request.
+	 * UnionID is the cross-app unique identifier and MUST be present for the
+	 * extension to work.  If the developer account has not enabled UnionID
+	 * access (error 100048), a clear exception is thrown with instructions.
 	 *
 	 * @param string $accessToken
-	 * @return string The OpenID.
+	 * @return array{openid: string, unionid: string}
 	 * @throws QQConnectException on failure.
 	 */
-	public function getOpenid( string $accessToken ): string {
-		// fmt=json requests a plain JSON response instead of JSONP.
+	public function fetchIdentity( string $accessToken ): array {
 		$params = [
 			'access_token' => $accessToken,
+			'unionid' => '1',
 			'fmt' => 'json',
 		];
 		$body = $this->httpGet( self::ME_URL, $params );
-
-		// With fmt=json the body should be plain JSON. Be defensive: if QQ
-		// still wraps it in callback(...);, strip the wrapper.
 		$data = $this->parseCallbackJson( $body, 'openid' );
-		if ( empty( $data['openid'] ) ) {
-			throw new QQConnectException( 'openid', 'no openid in response' );
+
+		if ( empty( $data['unionid'] ) ) {
+			// Error 100048 = "companyid not set" → unionid not enabled.
+			if ( isset( $data['error'] ) && (int)$data['error'] === 100048 ) {
+				throw new QQConnectException( 'unionid',
+					'UnionID not enabled for this QQ Connect developer account. '
+					. 'See https://wiki.connect.qq.com/unionid%E4%BB%8B%E7%BB%8D '
+					. 'to apply for UnionID access. '
+					. '(error 100048: ' . ( $data['error_description'] ?? 'no description' ) . ')'
+				);
+			}
+			throw new QQConnectException( 'unionid',
+				'unionid not returned by /oauth2.0/me. '
+				. 'Ensure the developer account has UnionID access enabled.'
+			);
 		}
-		return $data['openid'];
+		if ( empty( $data['openid'] ) ) {
+			throw new QQConnectException( 'unionid', 'no openid in /me response' );
+		}
+
+		return [
+			'openid' => $data['openid'],
+			'unionid' => $data['unionid'],
+		];
 	}
 
 	/**

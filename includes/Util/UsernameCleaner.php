@@ -59,14 +59,14 @@ class UsernameCleaner {
 	}
 
 	/**
-	 * Generate a fallback username based on a QQ openid, used when the cleaned
+	 * Generate a fallback username based on a QQ unionid, used when the cleaned
 	 * nickname is empty or invalid.
 	 *
-	 * @param string $openid
+	 * @param string $unionid
 	 * @return string e.g. "QQUser_ab12cd34"
 	 */
-	public static function generateFromOpenid( string $openid ): string {
-		$suffix = substr( md5( $openid ), 0, 8 );
+	public static function generateFromUnionid( string $unionid ): string {
+		$suffix = substr( md5( $unionid ), 0, 8 );
 		return 'QQUser_' . $suffix;
 	}
 }

@@ -4,11 +4,11 @@
 -- See https://www.mediawiki.org/wiki/Manual:Schema_changes
 CREATE TABLE qqconnect_users (
   qqc_user INTEGER NOT NULL,
-  qqc_openid TEXT NOT NULL,
+  qqc_unionid TEXT NOT NULL,
   qqc_appid TEXT NOT NULL,
   qqc_nickname TEXT DEFAULT NULL,
   qqc_avatar TEXT DEFAULT NULL,
   qqc_bound_timestamp TIMESTAMPTZ NOT NULL,
   PRIMARY KEY (qqc_user),
-  CONSTRAINT qqc_openid_appid UNIQUE (qqc_openid, qqc_appid)
+  CONSTRAINT qqc_unionid_unique UNIQUE (qqc_unionid)
 );

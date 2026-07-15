@@ -1,7 +1,7 @@
 [
 	{
 		"name": "qqconnect_users",
-		"comment": "Mapping table between MediaWiki users and QQ Connect OpenIDs. Each MediaWiki user can be bound to at most one QQ account, and each QQ OpenID (per APPID) can be bound to at most one MediaWiki user.",
+		"comment": "Mapping table between MediaWiki users and QQ Connect UnionIDs. Each MediaWiki user can be bound to at most one QQ account, and each QQ UnionID can be bound to at most one MediaWiki user. UnionID is the cross-app unique identifier per QQ互联 developer account.",
 		"columns": [
 			{
 				"name": "qqc_user",
@@ -14,17 +14,17 @@
 				}
 			},
 			{
-				"name": "qqc_openid",
-				"comment": "QQ Connect OpenID (per-app unique identifier of the QQ user).",
+				"name": "qqc_unionid",
+				"comment": "QQ Connect UnionID (cross-app unique identifier of the QQ user). At least 36 bytes; QQ recommends reserving 64 bytes.",
 				"type": "string",
 				"options": {
 					"notnull": true,
-					"length": 255
+					"length": 64
 				}
 			},
 			{
 				"name": "qqc_appid",
-				"comment": "QQ Connect APPID that was used when this binding was established. Stored so a future APPID change does not silently repurpose bindings.",
+				"comment": "QQ Connect APPID that was used when this binding was established. Stored for audit; not part of the uniqueness constraint because UnionID is already cross-app.",
 				"type": "string",
 				"options": {
 					"notnull": true,
@@ -60,11 +60,10 @@
 		],
 		"indexes": [
 			{
-				"name": "qqc_openid_appid",
-				"comment": "Ensures a QQ OpenID/APPID pair is bound to at most one MediaWiki user.",
+				"name": "qqc_unionid_unique",
+				"comment": "Ensures a QQ UnionID is bound to at most one MediaWiki user.",
 				"columns": [
-					"qqc_openid",
-					"qqc_appid"
+					"qqc_unionid"
 				],
 				"unique": true
 			}
