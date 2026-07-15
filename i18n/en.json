@@ -55,6 +55,8 @@
 	"qqconnect-link-form-title": "Link QQ to Existing Account",
 	"qqconnect-link-form-intro": "Enter the credentials of the MediaWiki account you want to bind to QQ account \"$1\".",
 	"qqconnect-link-form-2fa-intro": "Your account \"$1\" has two-factor authentication enabled. Enter your verification code to confirm your identity.",
+
+	"qqconnect": "QQ Account",
 	"qqconnect-link-form-username": "MediaWiki username:",
 	"qqconnect-link-form-password": "Password:",
 	"qqconnect-link-form-submit": "Verify and Bind",

@@ -54,6 +54,8 @@
 	"qqconnect-link-form-title": "Title of the link form.",
 	"qqconnect-link-form-intro": "Intro; $1 is the QQ nickname.",
 	"qqconnect-link-form-2fa-intro": "Intro shown during the 2FA step of the link form (Flow 1). $1 is the QQ nickname.",
+
+	"qqconnect": "Page title for Special:QQConnect.",
 	"qqconnect-link-form-username": "Form label for username.",
 	"qqconnect-link-form-password": "Form label for password.",
 	"qqconnect-link-form-submit": "Submit button text.",

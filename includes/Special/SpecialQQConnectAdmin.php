@@ -198,6 +198,11 @@ class SpecialQQConnectAdmin extends SpecialPage {
 		$username = $targetUser->getName();
 		$ok = $this->store->unbind( $userId );
 		if ( $ok ) {
+			$logEntry = new \ManualLogEntry( 'qqconnect', 'admin-unbind' );
+			$logEntry->setPerformer( $this->getUser() );
+			$logEntry->setTarget( $targetUser->getUserPage() );
+			$logEntry->insert();
+
 			$this->getOutput()->addWikiMsg( 'qqconnect-admin-unbind-success', $username );
 		} else {
 			$this->getOutput()->addWikiMsg( 'qqconnect-admin-nobody' );

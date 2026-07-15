@@ -73,9 +73,17 @@ class SpecialQQConnect extends SpecialPage {
 
 		$user = $this->getUser();
 		$binding = $this->store->findBindingByUser( $user->getId() );
+		$request = $this->getRequest();
+
+		// HTMLForm action URL is the bare page title; detect unbind form
+		// submission via hidden marker field (same pattern as QQConnectLogin).
+		if ( $request->getRawVal( '__qqconnect_flow' ) === 'unbind' ) {
+			$this->handleUnbind( $binding );
+			return;
+		}
 
 		// Handle actions from query string.
-		$action = $this->getRequest()->getRawVal( 'action' );
+		$action = $request->getRawVal( 'action' );
 		if ( $action === 'bind' && !$binding ) {
 			$this->startBindFlow();
 			return;
@@ -210,27 +218,29 @@ class SpecialQQConnect extends SpecialPage {
 	 *
 	 * @param array $binding
 	 */
-	private function handleUnbind( array $binding ) {
-		$request = $this->getRequest();
-		$confirmed = $request->getBool( 'confirm' );
-
-		if ( !$confirmed ) {
-			// Show a confirmation form.
-			$formDescriptor = [
-				'confirm_info' => [
-					'type' => 'info',
-					'default' => $this->msg( 'qqconnect-manage-confirm-unbind' )->text(),
-				],
-			];
-			$form = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
-			$form->setSubmitTextMsg( 'qqconnect-manage-unbind' );
-			$form->setSubmitDestructive();
-			$form->setSubmitCallback( [ $this, 'onUnbindConfirm' ] );
-			$form->show();
+	private function handleUnbind( ?array $binding ) {
+		if ( !$binding ) {
+			$this->getOutput()->addWikiMsg( 'qqconnect-manage-not-bound' );
 			return;
 		}
 
-		$this->onUnbindConfirm( [] );
+		// Show a confirmation form.
+		$formDescriptor = [
+			'confirm_info' => [
+				'type' => 'info',
+				'default' => $this->msg( 'qqconnect-manage-confirm-unbind' )->text(),
+			],
+			'__qqconnect_flow' => [
+				'type' => 'hidden',
+				'name' => '__qqconnect_flow',
+				'default' => 'unbind',
+			],
+		];
+		$form = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
+		$form->setSubmitTextMsg( 'qqconnect-manage-unbind' );
+		$form->setSubmitDestructive();
+		$form->setSubmitCallback( [ $this, 'onUnbindConfirm' ] );
+		$form->show();
 	}
 
 	/**
@@ -241,9 +251,15 @@ class SpecialQQConnect extends SpecialPage {
 		$userId = $this->getUser()->getId();
 		$ok = $this->store->unbind( $userId );
 		if ( $ok ) {
+			$logEntry = new \ManualLogEntry( 'qqconnect', 'unbind' );
+			$logEntry->setPerformer( $this->getUser() );
+			$logEntry->setTarget( $this->getUser()->getUserPage() );
+			$logEntry->insert();
+
 			$this->getOutput()->addWikiMsg( 'qqconnect-manage-unbind-success' );
 		}
-		$this->getOutput()->addReturnTo( $this->getPageTitle() );
+		// MW 1.43 HTMLForm::show() does not redirect on newGood().
+		$this->getOutput()->redirect( $this->getPageTitle()->getFullURL() );
 		return StatusValue::newGood();
 	}
 

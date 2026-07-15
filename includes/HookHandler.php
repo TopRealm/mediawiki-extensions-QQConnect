@@ -210,6 +210,13 @@ class HookHandler {
 				'Bound pending QQ {unionid} to newly created user {user}',
 				[ 'unionid' => $pending['unionid'], 'user' => $user->getName() ]
 			);
+			$logEntry = new \ManualLogEntry( 'qqconnect', 'bind' );
+			$logEntry->setPerformer( $user );
+			$logEntry->setTarget( $user->getUserPage() );
+			$logEntry->setParameters( [
+				'4::nickname' => $pending['nickname'] ?? '',
+			] );
+			$logEntry->insert();
 		}
 		$session->setSecret( P::SESSION_KEY_PENDING, null );
 	}

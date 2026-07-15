@@ -4,7 +4,7 @@
 			"Zorua Fox",
 			"Youshou Archives Contributors"
 		],
-		"language": "zh-hans"
+		"language": "zh"
 	},
 	"qqconnect-desc-name": "QQ登录",
 	"qqconnect-desc": "允许用户通过QQ互联（QQ Connect）OAuth2使用QQ账号登录MediaWiki。",

@@ -150,6 +150,15 @@
 	"AvailableRights": [
 		"qqconnect-manage"
 	],
+	"LogTypes": [
+		"qqconnect"
+	],
+	"LogActionsHandlers": {
+		"qqconnect/bind": "qqconnect-logentry-bind",
+		"qqconnect/unbind": "qqconnect-logentry-unbind",
+		"qqconnect/rebind": "qqconnect-logentry-rebind",
+		"qqconnect/admin-unbind": "qqconnect-logentry-admin-unbind"
+	},
 	"ExtensionFunctions": [
 		"MediaWiki\\Extension\\QQConnect\\HookHandler::onExtensionFunction"
 	]

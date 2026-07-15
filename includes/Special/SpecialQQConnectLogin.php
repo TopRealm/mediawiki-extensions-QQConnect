@@ -880,6 +880,15 @@ class SpecialQQConnectLogin extends SpecialPage {
 		if ( !$ok ) {
 			return StatusValue::newFatal( 'qqconnect-error-bind-failed' );
 		}
+		// Log the bind action (Flow 1: unauthenticated user binds QQ).
+		$logEntry = new \ManualLogEntry( 'qqconnect', 'bind' );
+		$logEntry->setPerformer( $boundUser );
+		$logEntry->setTarget( $boundUser->getUserPage() );
+		$logEntry->setParameters( [
+			'4::nickname' => $pending['nickname'] ?? '',
+		] );
+		$logEntry->insert();
+
 		$this->getRequest()->getSession()->setSecret( P::SESSION_KEY_PENDING, null );
 		$authManager->setAuthenticationSessionData(
 			'QQConnect:linkSuccess', $boundUser->getName()
@@ -996,6 +1005,16 @@ class SpecialQQConnectLogin extends SpecialPage {
 			$this->showError( 'qqconnect-error-bind-failed' );
 			return;
 		}
+
+		// Log the bind/rebind action.
+		$logEntry = new \ManualLogEntry( 'qqconnect',
+			$bindMode === 'rebind' ? 'rebind' : 'bind' );
+		$logEntry->setPerformer( $user );
+		$logEntry->setTarget( $user->getUserPage() );
+		$logEntry->setParameters( [
+			'4::nickname' => $nickname,
+		] );
+		$logEntry->insert();
 
 		$out = $this->getOutput();
 		$out->setPageTitleMsg( $this->msg( 'qqconnect-special-manage-title' ) );
