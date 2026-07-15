@@ -1002,60 +1002,39 @@ class SpecialQQConnectLogin extends SpecialPage {
 		$authManager->removeAuthenticationSessionData( P::SESSION_KEY_RETURNTO );
 
 		if ( $returnToUrl === '' ) {
-			// Session lost; fall back to the login page with an error.
+			// Session lost; fall back to the login page.
 			$returnToUrl = SpecialPage::getTitleFor( 'Userlogin' )->getFullURL();
 		}
 
 		// Determine whether the stored URL is an AuthManager continuation
-		// URL (e.g. Special:Userlogin/return?authAction=login&...) or a
-		// regular wiki page URL (from AjaxLogin's ?returnto=).
-		$loginReturnBase = SpecialPage::getTitleFor( 'Userlogin' )->getLocalURL( 'return' );
-		$isAuthManagerFlow = ( strpos( $returnToUrl, $loginReturnBase ) === 0 );
+		// URL by checking for the authAction parameter rather than doing a
+		// fragile strpos against the base URL (the stored URL is absolute
+		// while getLocalURL returns a relative path).
+		$isAuthManagerFlow = ( strpos( $returnToUrl, 'authAction=login' ) !== false
+			|| strpos( $returnToUrl, 'wpLoginToken=' ) !== false );
 
 		if ( $isAuthManagerFlow ) {
-			// Path 1: AuthManager-initiated flow.
-			// Redirect to the continuation URL; the login form will replay
-			// the stashed request data, AuthManager will call our
-			// continuePrimaryAuthentication, and secondary providers (2FA)
-			// will run as normal.
-			$this->logger->info( 'QQ resumeLoginFlow: AuthManager path, redirecting to {url}', [
-				'url' => $returnToUrl,
-			] );
+			// Path 1: AuthManager-initiated flow.  Redirect to the
+			// continuation URL; Special:Userlogin will replay the stashed
+			// request and AuthManager will call continuePrimaryAuthentication.
 			$this->getOutput()->redirect( $returnToUrl );
 			return;
 		}
 
-		// Path 2: AjaxLogin / ?returnto= flow.
-		// AUTHN_STATE was set up by beginAuthentication() in startFlow().
-		// Call continueAuthentication() directly so AuthManager completes
-		// the login (including 2FA) before we redirect to the target page.
-		$this->logger->info( 'QQ resumeLoginFlow: AjaxLogin path, calling continueAuthentication directly' );
-
+		// Path 2: AjaxLogin / ?returnto= flow.  Call continueAuthentication
+		// directly since there is no AuthManager continuation URL.
 		$contReq = new QQContinueAuthenticationRequest();
 		$response = $authManager->continueAuthentication( [ $contReq ] );
 
 		switch ( $response->status ) {
 			case AuthenticationResponse::PASS:
-				// User is now logged in via AuthManager (session user is set).
-				// Secondary providers (OATHAuth etc.) have already been
-				// satisfied by AuthManager internally.
-				$this->logger->info( 'QQ resumeLoginFlow: continueAuthentication PASS for {user}', [
-					'user' => $response->username ?? '(unknown)',
-				] );
 				$this->getOutput()->redirect( $returnToUrl );
 				break;
 
 			case AuthenticationResponse::UI:
-				// A secondary provider (e.g. OATHAuth) requires additional
-				// input.  We cannot handle the 2FA form inline in the
-				// AjaxLogin path, so redirect to Special:Userlogin where
-				// the normal login flow can complete with 2FA.
-				// AUTHN_STATE remains in the session; the login form will
-				// pick it up and prompt for the TOTP code.
-				$this->logger->info( 'QQ resumeLoginFlow: 2FA required, falling back to Special:Userlogin' );
+				// 2FA required — fall back to Special:Userlogin.
 				$authManager->setAuthenticationSessionData(
-					P::SESSION_KEY_RETURNTO,
-					$returnToUrl
+					P::SESSION_KEY_RETURNTO, $returnToUrl
 				);
 				$this->getOutput()->redirect(
 					SpecialPage::getTitleFor( 'Userlogin' )->getFullURL()
@@ -1063,10 +1042,6 @@ class SpecialQQConnectLogin extends SpecialPage {
 				break;
 
 			default:
-				// FAIL or other unexpected status.
-				$this->logger->warning( 'QQ resumeLoginFlow: continueAuthentication returned {status}', [
-					'status' => $response->status,
-				] );
 				$this->getOutput()->redirect( $returnToUrl );
 				break;
 		}
