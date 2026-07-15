@@ -110,9 +110,8 @@
 	"qqconnect-action-rebind": "更换QQ",
 	"qqconnect-action-bind": "绑定QQ",
 
-	"qqconnect-right-qqconnect-manage": "管理其他用户的QQ绑定",
-
-	"qqconnect-group-user-menu": "用户菜单",
+	"right-qqconnect-manage": "管理其他用户的QQ绑定",
+	"action-qqconnect-manage": "管理其他用户的QQ绑定",
 
 	"qqconnect-log-name": "QQ互联日志",
 	"qqconnect-log-desc": "与QQ账号绑定相关的事件。",

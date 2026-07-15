@@ -33,7 +33,7 @@ class SpecialQQConnectAdmin extends SpecialPage {
 		QQConnectConfig $config,
 		QQStore $store
 	) {
-		parent::__construct( 'QQConnectAdmin', 'qqconnect-manage' );
+		parent::__construct( 'QQConnectAdmin', 'qqconnect-manage', true );
 		$this->config = $config;
 		$this->store = $store;
 	}

@@ -109,9 +109,8 @@
 	"qqconnect-action-rebind": "Action label.",
 	"qqconnect-action-bind": "Action label.",
 
-	"qqconnect-right-qqconnect-manage": "Right description.",
-
-	"qqconnect-group-user-menu": "Group name for special pages.",
+	"right-qqconnect-manage": "Description of the qqconnect-manage right shown on Special:ListGroupRights.",
+	"action-qqconnect-manage": "Description of the qqconnect-manage action shown on Special:SpecialPages and in permission errors.",
 
 	"qqconnect-log-name": "Log name.",
 	"qqconnect-log-desc": "Log description.",

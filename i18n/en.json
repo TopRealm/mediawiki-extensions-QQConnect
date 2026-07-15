@@ -110,9 +110,8 @@
 	"qqconnect-action-rebind": "Change QQ",
 	"qqconnect-action-bind": "Bind QQ",
 
-	"qqconnect-right-qqconnect-manage": "Manage other users' QQ bindings",
-
-	"qqconnect-group-user-menu": "User menu",
+	"right-qqconnect-manage": "Manage other users' QQ bindings",
+	"action-qqconnect-manage": "manage other users' QQ bindings",
 
 	"qqconnect-log-name": "QQ Connect log",
 	"qqconnect-log-desc": "Events related to QQ account binding.",
