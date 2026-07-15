@@ -94,6 +94,20 @@ class SpecialQQConnectLogin extends SpecialPage {
 		$this->getOutput()->addModuleStyles( 'ext.QQConnect.styles' );
 
 		$request = $this->getRequest();
+		$authManager = MediaWikiServices::getInstance()->getAuthManager();
+
+		// If a link-existing-account flow just completed successfully, the
+		// HTMLForm post-submit redirect lands here (without ?action=link).
+		// Show the success page rather than falling through to startFlow().
+		$linkSuccess = $authManager->getAuthenticationSessionData( 'QQConnect:linkSuccess', null );
+		if ( $linkSuccess !== null ) {
+			$authManager->removeAuthenticationSessionData( 'QQConnect:linkSuccess' );
+			$out = $this->getOutput();
+			$out->setPageTitleMsg( $this->msg( 'qqconnect-special-manage-title' ) );
+			$out->addWikiMsg( 'qqconnect-manage-bind-success' );
+			$out->addReturnTo( SpecialPage::getTitleFor( 'QQConnect' ) );
+			return;
+		}
 
 		// If there is a ?code= parameter, this is the OAuth callback.
 		if ( $request->getRawVal( 'code' ) !== null ) {
@@ -116,6 +130,13 @@ class SpecialQQConnectLogin extends SpecialPage {
 		// ?action=create redirects to Special:CreateAccount with prefilled name.
 		if ( $request->getRawVal( 'action' ) === 'create' ) {
 			$this->handleCreateRedirect();
+			return;
+		}
+
+		// ?action=verify-bind shows the 2FA verification form for the
+		// authenticated-user bind flow (Flow 2).
+		if ( $request->getRawVal( 'action' ) === 'verify-bind' ) {
+			$this->handleVerifyBind();
 			return;
 		}
 
@@ -303,6 +324,10 @@ class SpecialQQConnectLogin extends SpecialPage {
 	/**
 	 * Handle the callback when a logged-in user is binding/rebinding.
 	 *
+	 * If the user has a secondary authentication provider enabled (e.g.
+	 * OATHAuth), we redirect to ?action=verify-bind to prompt for TOTP
+	 * before completing the binding. Otherwise the bind is done directly.
+	 *
 	 * @param string $bindMode 'bind' or 'rebind'
 	 * @param string $openid
 	 * @param string $appid
@@ -333,31 +358,43 @@ class SpecialQQConnectLogin extends SpecialPage {
 			return;
 		}
 
-		if ( $bindMode === 'rebind' ) {
-			// Replace the existing binding.
-			$ok = $this->store->rebind( $user->getId(), $openid, $appid, $nickname, $avatar );
-		} else {
-			// Fresh bind; user should not already be bound.
-			if ( $this->store->userIsBound( $user->getId() ) ) {
-				$this->showError( 'qqconnect-error-user-bound-other' );
-				return;
-			}
-			$ok = $this->store->bind( $user->getId(), $openid, $appid, $nickname, $avatar );
-		}
+		// Determine whether the user has a secondary provider that must be
+		// satisfied (e.g. OATHAuth).  We use AuthManager's ACTION_LINK
+		// because that action runs secondary providers for a logged-in user
+		// without demanding password re-entry.
+		$linkReqs = $authManager->getAuthenticationRequests(
+			AuthManager::ACTION_LINK, $user
+		);
 
-		if ( !$ok ) {
-			$this->showError( 'qqconnect-error-bind-failed' );
+		// Keep only requests that have actual form fields (TOTP, etc.).
+		$secondaryReqs = array_filter( $linkReqs, static function ( $req ) {
+			return $req->getFieldInfo() !== [];
+		} );
+
+		if ( $secondaryReqs ) {
+			// 2FA is active — stash bind data and redirect to the
+			// verification page.
+			$authManager->setAuthenticationSessionData( 'QQConnect:pendingBind', [
+				'bindMode' => $bindMode,
+				'openid' => $openid,
+				'appid' => $appid,
+				'nickname' => $nickname,
+				'avatar' => $avatar,
+				'existingBinding' => $existingBinding,
+			] );
+			$authManager->setAuthenticationSessionData(
+				'QQConnect:bindSecondaryReqs', $secondaryReqs
+			);
+			$this->getOutput()->redirect(
+				$this->getPageTitle()->getLocalURL( [ 'action' => 'verify-bind' ] )
+			);
 			return;
 		}
 
-		$out = $this->getOutput();
-		$out->setPageTitleMsg( $this->msg( 'qqconnect-special-manage-title' ) );
-		if ( $bindMode === 'rebind' ) {
-			$out->addWikiMsg( 'qqconnect-manage-rebind-success' );
-		} else {
-			$out->addWikiMsg( 'qqconnect-manage-bind-success' );
-		}
-		$out->addReturnTo( SpecialPage::getTitleFor( 'QQConnect' ) );
+		// No secondary provider → bind directly.
+		$this->executeBind(
+			$bindMode, $user, $openid, $appid, $nickname, $avatar, $existingBinding
+		);
 	}
 
 	/**
@@ -430,7 +467,10 @@ class SpecialQQConnectLogin extends SpecialPage {
 	}
 
 	/**
-	 * Show the "link to existing account" form (username + password).
+	 * Show the "link to existing account" form.
+	 *
+	 * Multi-step: step 1 = username + password; step 2 (if 2FA) = OATHAuth
+	 * fields obtained from AuthManager's continue-flow.
 	 */
 	private function handleLinkForm() {
 		$pending = $this->getPending();
@@ -439,24 +479,49 @@ class SpecialQQConnectLogin extends SpecialPage {
 			return;
 		}
 
-		$out = $this->getOutput();
-		$out->setPageTitleMsg( $this->msg( 'qqconnect-link-form-title' ) );
-		$out->addWikiMsg( 'qqconnect-link-form-intro', $pending['nickname'] ?? $pending['openid'] );
+		$authManager = MediaWikiServices::getInstance()->getAuthManager();
+		$linkAuthState = $authManager->getAuthenticationSessionData( 'QQConnect:linkAuthState', null );
 
-		$formDescriptor = [
-			'username' => [
-				'type' => 'text',
-				'name' => 'username',
-				'label-message' => 'qqconnect-link-form-username',
-				'required' => true,
-			],
-			'password' => [
-				'type' => 'password',
-				'name' => 'password',
-				'label-message' => 'qqconnect-link-form-password',
-				'required' => true,
-			],
-		];
+		$out = $this->getOutput();
+
+		if ( $linkAuthState !== null ) {
+			// Step 2: secondary authentication (e.g. OATHAuth TOTP).
+			$out->setPageTitleMsg( $this->msg( 'qqconnect-link-form-title' ) );
+			$out->addWikiMsg( 'qqconnect-link-form-2fa-intro',
+				$pending['nickname'] ?? $pending['openid'] );
+
+			$formDescriptor = $linkAuthState['neededFields'];
+			$formDescriptor['linkstep'] = [
+				'type' => 'hidden',
+				'name' => 'linkstep',
+				'default' => 'continue',
+			];
+		} else {
+			// Step 1: username + password.
+			$out->setPageTitleMsg( $this->msg( 'qqconnect-link-form-title' ) );
+			$out->addWikiMsg( 'qqconnect-link-form-intro',
+				$pending['nickname'] ?? $pending['openid'] );
+
+			$formDescriptor = [
+				'username' => [
+					'type' => 'text',
+					'name' => 'username',
+					'label-message' => 'qqconnect-link-form-username',
+					'required' => true,
+				],
+				'password' => [
+					'type' => 'password',
+					'name' => 'password',
+					'label-message' => 'qqconnect-link-form-password',
+					'required' => true,
+				],
+				'linkstep' => [
+					'type' => 'hidden',
+					'name' => 'linkstep',
+					'default' => 'initial',
+				],
+			];
+		}
 
 		$form = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
 		$form->setSubmitTextMsg( 'qqconnect-link-form-submit' );
@@ -465,12 +530,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 	}
 
 	/**
-	 * Verify the supplied credentials via AuthManager (so OATHAuth etc. run),
-	 * then bind the QQ and log the user in.
-	 *
-	 * We build a PasswordAuthenticationRequest submission and pass it to
-	 * AuthManager::beginAuthentication. This runs pre-auth, primary (password),
-	 * and secondary (OATHAuth 2FA) providers. On PASS, we bind and log in.
+	 * Handle link-form submission (both step 1 and step 2).
 	 *
 	 * @param array $data
 	 * @return StatusValue
@@ -481,73 +541,136 @@ class SpecialQQConnectLogin extends SpecialPage {
 			return StatusValue::newFatal( 'qqconnect-error-invalid-state' );
 		}
 
+		$authManager = MediaWikiServices::getInstance()->getAuthManager();
+		$step = $data['linkstep'] ?? 'initial';
+
+		// -----------------------------------------------------------------
+		//  Step 2: continue after secondary (2FA) input
+		// -----------------------------------------------------------------
+		if ( $step === 'continue' ) {
+			$linkAuthState = $authManager->getAuthenticationSessionData(
+				'QQConnect:linkAuthState', null
+			);
+			if ( $linkAuthState === null ) {
+				return StatusValue::newFatal( 'qqconnect-error-invalid-state' );
+			}
+
+			$reqs = $authManager->getAuthenticationRequests( AuthManager::ACTION_LOGIN );
+			$loadedReqs = AuthenticationRequest::loadRequestsFromSubmission( $reqs, $data );
+			$response = $authManager->continueAuthentication( $loadedReqs );
+
+			if ( $response->status === AuthenticationResponse::PASS ) {
+				$authManager->removeAuthenticationSessionData( 'QQConnect:linkAuthState' );
+				return $this->completeLinkBind(
+					$authManager, $pending, $response->username
+				);
+			}
+
+			if ( $response->status === AuthenticationResponse::UI ) {
+				// Still need more input (e.g. backup recovery code after
+				// failed TOTP). Update the stored field descriptors and
+				// re-render the 2FA form.
+				$neededFields = [];
+				foreach ( $response->neededRequests as $req ) {
+					foreach ( $req->getFieldInfo() as $fieldName => $fieldInfo ) {
+						$neededFields[$fieldName] = $fieldInfo;
+					}
+				}
+				$authManager->setAuthenticationSessionData( 'QQConnect:linkAuthState', [
+					'neededFields' => $neededFields,
+				] );
+				return StatusValue::newGood();
+			}
+
+			$authManager->removeAuthenticationSessionData( 'QQConnect:linkAuthState' );
+			return StatusValue::newFatal( 'qqconnect-error-auth-failed' );
+		}
+
+		// -----------------------------------------------------------------
+		//  Step 1: verify username + password via beginAuthentication
+		// -----------------------------------------------------------------
 		$username = trim( $data['username'] ?? '' );
 		$password = $data['password'] ?? '';
 		if ( $username === '' || $password === '' ) {
 			return StatusValue::newFatal( 'qqconnect-error-auth-failed' );
 		}
 
-		$authManager = MediaWikiServices::getInstance()->getAuthManager();
-
-		// Obtain the login AuthenticationRequests and populate a password
-		// request with the submitted credentials.
 		$reqs = $authManager->getAuthenticationRequests( AuthManager::ACTION_LOGIN );
 		$loadedReqs = AuthenticationRequest::loadRequestsFromSubmission( $reqs, [
 			'username' => $username,
 			'password' => $password,
 		] );
 
-		// Verify credentials through AuthManager (runs OATHAuth etc.).
 		$response = $authManager->beginAuthentication(
 			$loadedReqs,
 			$this->getFullTitle()->getFullURL()
 		);
 
 		if ( $response->status === AuthenticationResponse::PASS ) {
-			$boundUser = User::newFromName( $response->username );
-			if ( !$boundUser || !$boundUser->getId() ) {
-				return StatusValue::newFatal( 'qqconnect-error-auth-failed' );
-			}
-			// The QQ must not be bound to someone else.
-			if ( $this->store->openidIsBound( $pending['openid'], $pending['appid'] ) ) {
-				return StatusValue::newFatal( 'qqconnect-error-openid-bound-other' );
-			}
-			// The MediaWiki user must not already have a different QQ bound.
-			if ( $this->store->userIsBound( $boundUser->getId() ) ) {
-				return StatusValue::newFatal( 'qqconnect-error-user-bound-other' );
-			}
-			$ok = $this->store->bind(
-				$boundUser->getId(),
-				$pending['openid'],
-				$pending['appid'],
-				$pending['nickname'] ?? '',
-				$pending['avatar'] ?? ''
+			return $this->completeLinkBind(
+				$authManager, $pending, $response->username
 			);
-			if ( !$ok ) {
-				return StatusValue::newFatal( 'qqconnect-error-bind-failed' );
-			}
-			// Clear pending.
-			$authManager->removeAuthenticationSessionData( P::SESSION_KEY_PENDING );
+		}
 
-			// AuthManager::beginAuthentication already logged the user in on
-			// PASS. Show a success message.
-			$this->getOutput()->addWikiMsg( 'qqconnect-manage-bind-success' );
-			$this->getOutput()->addReturnTo( SpecialPage::getTitleFor( 'QQConnect' ) );
+		if ( $response->status === AuthenticationResponse::UI ) {
+			// Credentials are correct but a secondary provider (e.g.
+			// OATHAuth) requires additional input. Extract the needed
+			// form fields and stash them so handleLinkForm renders the
+			// 2FA step.
+			$neededFields = [];
+			foreach ( $response->neededRequests as $req ) {
+				foreach ( $req->getFieldInfo() as $fieldName => $fieldInfo ) {
+					$neededFields[$fieldName] = $fieldInfo;
+				}
+			}
+			$authManager->setAuthenticationSessionData( 'QQConnect:linkAuthState', [
+				'neededFields' => $neededFields,
+			] );
+			// Return good so HTMLForm redirects to the same page; on the
+			// next render handleLinkForm detects linkAuthState and shows
+			// the 2FA form.
 			return StatusValue::newGood();
 		}
 
-		// UI (e.g. OATHAuth 2FA challenge) or REDIRECT or FAIL.
-		// For a 2FA challenge during linking, surface a message directing the
-		// user to complete 2FA via the normal login flow first, then bind from
-		// the management page (which uses the bindMode flow).
-		if ( $response->status === AuthenticationResponse::UI
-			|| $response->status === AuthenticationResponse::REDIRECT
-		) {
+		// REDIRECT or FAIL.
+		return StatusValue::newFatal( 'qqconnect-error-auth-failed' );
+	}
+
+	/**
+	 * Complete the bind after AuthManager has authenticated the user (either
+	 * in step 1 with no 2FA, or step 2 after 2FA).
+	 *
+	 * @param AuthManager $authManager
+	 * @param array $pending
+	 * @param string $username Authenticated username.
+	 * @return StatusValue
+	 */
+	private function completeLinkBind( $authManager, array $pending, string $username ): StatusValue {
+		$boundUser = User::newFromName( $username );
+		if ( !$boundUser || !$boundUser->getId() ) {
 			return StatusValue::newFatal( 'qqconnect-error-auth-failed' );
 		}
-
-		// FAIL.
-		return StatusValue::newFatal( 'qqconnect-error-auth-failed' );
+		if ( $this->store->openidIsBound( $pending['openid'], $pending['appid'] ) ) {
+			return StatusValue::newFatal( 'qqconnect-error-openid-bound-other' );
+		}
+		if ( $this->store->userIsBound( $boundUser->getId() ) ) {
+			return StatusValue::newFatal( 'qqconnect-error-user-bound-other' );
+		}
+		$ok = $this->store->bind(
+			$boundUser->getId(),
+			$pending['openid'],
+			$pending['appid'],
+			$pending['nickname'] ?? '',
+			$pending['avatar'] ?? ''
+		);
+		if ( !$ok ) {
+			return StatusValue::newFatal( 'qqconnect-error-bind-failed' );
+		}
+		$authManager->removeAuthenticationSessionData( P::SESSION_KEY_PENDING );
+		$authManager->setAuthenticationSessionData(
+			'QQConnect:linkSuccess', $boundUser->getName()
+		);
+		return StatusValue::newGood();
 	}
 
 	/**
@@ -615,6 +738,183 @@ class SpecialQQConnectLogin extends SpecialPage {
 	private function getPending(): ?array {
 		return MediaWikiServices::getInstance()->getAuthManager()
 			->getAuthenticationSessionData( P::SESSION_KEY_PENDING, null );
+	}
+
+	/**
+	 * Perform the actual bind/re-bind database write and show success.
+	 * Shared by the direct-bind path and the post-2FA-verification path.
+	 *
+	 * @param string $bindMode 'bind' or 'rebind'
+	 * @param \MediaWiki\User\User $user
+	 * @param string $openid
+	 * @param string $appid
+	 * @param string $nickname
+	 * @param string $avatar
+	 * @param array|null $existingBinding
+	 */
+	private function executeBind(
+		string $bindMode,
+		User $user,
+		string $openid,
+		string $appid,
+		string $nickname,
+		string $avatar,
+		?array $existingBinding
+	) {
+		if ( $bindMode === 'rebind' ) {
+			$ok = $this->store->rebind( $user->getId(), $openid, $appid, $nickname, $avatar );
+		} else {
+			if ( $this->store->userIsBound( $user->getId() ) ) {
+				$this->showError( 'qqconnect-error-user-bound-other' );
+				return;
+			}
+			$ok = $this->store->bind( $user->getId(), $openid, $appid, $nickname, $avatar );
+		}
+
+		if ( !$ok ) {
+			$this->showError( 'qqconnect-error-bind-failed' );
+			return;
+		}
+
+		$out = $this->getOutput();
+		$out->setPageTitleMsg( $this->msg( 'qqconnect-special-manage-title' ) );
+		if ( $bindMode === 'rebind' ) {
+			$out->addWikiMsg( 'qqconnect-manage-rebind-success' );
+		} else {
+			$out->addWikiMsg( 'qqconnect-manage-bind-success' );
+		}
+		$out->addReturnTo( SpecialPage::getTitleFor( 'QQConnect' ) );
+	}
+
+	/**
+	 * Flow 2 step 2: show the 2FA verification form before completing a
+	 * bind initiated by an already-logged-in user.
+	 *
+	 * Uses AuthManager's ACTION_LINK flow so that only secondary providers
+	 * (e.g. OATHAuth) are prompted; the user does not re-enter a password.
+	 */
+	private function handleVerifyBind() {
+		$authManager = MediaWikiServices::getInstance()->getAuthManager();
+		$pendingBind = $authManager->getAuthenticationSessionData(
+			'QQConnect:pendingBind', null
+		);
+		if ( $pendingBind === null ) {
+			$this->showError( 'qqconnect-error-invalid-state' );
+			return;
+		}
+
+		$user = $this->getUser();
+		if ( !$user->isRegistered() ) {
+			$this->showError( 'qqconnect-error-invalid-state' );
+			return;
+		}
+
+		// Use ACTION_LINK to trigger only secondary providers.
+		$linkReqs = $authManager->getAuthenticationRequests(
+			AuthManager::ACTION_LINK, $user
+		);
+		$loadedReqs = AuthenticationRequest::loadRequestsFromSubmission(
+			$linkReqs, []
+		);
+		$response = $authManager->beginAccountLink(
+			$user, $loadedReqs,
+			$this->getPageTitle()->getLocalURL( [ 'action' => 'verify-bind' ] )
+		);
+
+		if ( $response->status === AuthenticationResponse::PASS ) {
+			// No secondary challenge needed (should have been caught earlier,
+			// but handle gracefully).
+			$authManager->removeAuthenticationSessionData( 'QQConnect:pendingBind' );
+			$authManager->removeAuthenticationSessionData( 'QQConnect:bindSecondaryReqs' );
+			$this->executeBind(
+				$pendingBind['bindMode'], $user,
+				$pendingBind['openid'], $pendingBind['appid'],
+				$pendingBind['nickname'], $pendingBind['avatar'],
+				$pendingBind['existingBinding']
+			);
+			return;
+		}
+
+		if ( $response->status === AuthenticationResponse::UI ) {
+			// Build form descriptor from the needed (secondary) requests.
+			$formDescriptor = [];
+			foreach ( $response->neededRequests as $req ) {
+				foreach ( $req->getFieldInfo() as $fieldName => $fieldInfo ) {
+					$formDescriptor[$fieldName] = $fieldInfo;
+				}
+			}
+
+			$out = $this->getOutput();
+			$out->setPageTitleMsg( $this->msg( 'qqconnect-verify-bind-title' ) );
+			$out->addWikiMsg( 'qqconnect-verify-bind-intro' );
+
+			$form = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
+			$form->setSubmitTextMsg( 'qqconnect-link-form-submit' );
+			$form->setSubmitCallback( [ $this, 'onVerifyBindSubmit' ] );
+			$form->show();
+			return;
+		}
+
+		// FAIL or REDIRECT.
+		$authManager->removeAuthenticationSessionData( 'QQConnect:pendingBind' );
+		$authManager->removeAuthenticationSessionData( 'QQConnect:bindSecondaryReqs' );
+		$this->showError( 'qqconnect-error-auth-failed' );
+	}
+
+	/**
+	 * Handle submission of the Flow 2 2FA form.
+	 *
+	 * @param array $data
+	 * @return StatusValue
+	 */
+	public function onVerifyBindSubmit( array $data ) {
+		$authManager = MediaWikiServices::getInstance()->getAuthManager();
+		$pendingBind = $authManager->getAuthenticationSessionData(
+			'QQConnect:pendingBind', null
+		);
+		if ( $pendingBind === null ) {
+			return StatusValue::newFatal( 'qqconnect-error-invalid-state' );
+		}
+
+		$user = $this->getUser();
+		if ( !$user->isRegistered() ) {
+			return StatusValue::newFatal( 'qqconnect-error-invalid-state' );
+		}
+
+		$linkReqs = $authManager->getAuthenticationRequests(
+			AuthManager::ACTION_LINK, $user
+		);
+		$loadedReqs = AuthenticationRequest::loadRequestsFromSubmission(
+			$linkReqs, $data
+		);
+		$response = $authManager->continueAccountLink( $loadedReqs );
+
+		if ( $response->status === AuthenticationResponse::PASS ) {
+			$authManager->removeAuthenticationSessionData( 'QQConnect:pendingBind' );
+			$authManager->removeAuthenticationSessionData( 'QQConnect:bindSecondaryReqs' );
+			$this->executeBind(
+				$pendingBind['bindMode'], $user,
+				$pendingBind['openid'], $pendingBind['appid'],
+				$pendingBind['nickname'], $pendingBind['avatar'],
+				$pendingBind['existingBinding']
+			);
+			// Stash a flag so execute() renders the success message instead
+			// of falling through to startFlow().
+			$authManager->setAuthenticationSessionData(
+				'QQConnect:linkSuccess', $user->getName()
+			);
+			return StatusValue::newGood();
+		}
+
+		if ( $response->status === AuthenticationResponse::UI ) {
+			// Still need more input; HTMLForm will re-render with the
+			// (possibly updated) needed requests on the next hit.
+			return StatusValue::newGood();
+		}
+
+		$authManager->removeAuthenticationSessionData( 'QQConnect:pendingBind' );
+		$authManager->removeAuthenticationSessionData( 'QQConnect:bindSecondaryReqs' );
+		return StatusValue::newFatal( 'qqconnect-error-auth-failed' );
 	}
 
 	/**

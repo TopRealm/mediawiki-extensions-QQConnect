@@ -42,6 +42,7 @@
 	"qqconnect-error-already-bound": "This QQ account is already bound to your account.",
 	"qqconnect-error-require-bind": "You must bind a QQ account to your user before you can edit pages. Go to [[Special:QQConnect|your QQ account management page]] to bind.",
 	"qqconnect-error-disabled": "QQ login is currently disabled.",
+	"qqconnect-error-link-2fa-required": "Your account has two-factor authentication enabled (e.g. OATHAuth). Please log in normally through the login page to complete 2FA, then bind your QQ from the [[Special:QQConnect|QQ account management page]].",
 
 	"qqconnect-choose-title": "QQ Account Not Bound",
 	"qqconnect-choose-intro": "Your QQ account ($1) is not yet linked to a MediaWiki account. Choose how to continue:",
@@ -53,9 +54,13 @@
 
 	"qqconnect-link-form-title": "Link QQ to Existing Account",
 	"qqconnect-link-form-intro": "Enter the credentials of the MediaWiki account you want to bind to QQ account \"$1\".",
+	"qqconnect-link-form-2fa-intro": "Your account \"$1\" has two-factor authentication enabled. Enter your verification code to confirm your identity.",
 	"qqconnect-link-form-username": "MediaWiki username:",
 	"qqconnect-link-form-password": "Password:",
 	"qqconnect-link-form-submit": "Verify and Bind",
+
+	"qqconnect-verify-bind-title": "Verify Identity to Complete QQ Binding",
+	"qqconnect-verify-bind-intro": "Your account has two-factor authentication enabled. Enter your verification code to complete the QQ account binding.",
 
 	"qqconnect-special-manage-title": "QQ Account",
 	"qqconnect-special-manage-intro": "Manage the QQ account bound to your MediaWiki account.",

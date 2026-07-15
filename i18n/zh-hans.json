@@ -42,6 +42,7 @@
 	"qqconnect-error-already-bound": "此QQ账号已绑定到您的账号。",
 	"qqconnect-error-require-bind": "您必须先绑定QQ账号才能编辑页面。请前往[[Special:QQConnect|QQ账号管理页面]]进行绑定。",
 	"qqconnect-error-disabled": "QQ登录当前已被禁用。",
+	"qqconnect-error-link-2fa-required": "您的账号启用了两步验证（如OATHAuth）。请先通过正常登录流程完成两步验证，然后在[[Special:QQConnect|QQ账号管理页面]]进行绑定。",
 
 	"qqconnect-choose-title": "QQ账号未绑定",
 	"qqconnect-choose-intro": "您的QQ账号（$1）尚未关联到MediaWiki账号，请选择继续方式：",
@@ -53,9 +54,13 @@
 
 	"qqconnect-link-form-title": "将QQ绑定到已有账号",
 	"qqconnect-link-form-intro": "输入您要绑定QQ账号\"$1\"的MediaWiki账号凭据。",
+	"qqconnect-link-form-2fa-intro": "您的账号\"$1\"已启用两步验证，请输入验证码完成身份确认。",
 	"qqconnect-link-form-username": "MediaWiki用户名：",
 	"qqconnect-link-form-password": "密码：",
 	"qqconnect-link-form-submit": "验证并绑定",
+
+	"qqconnect-verify-bind-title": "验证身份以完成QQ绑定",
+	"qqconnect-verify-bind-intro": "您的账号已启用两步验证，请输入验证码以完成QQ账号绑定。",
 
 	"qqconnect-special-manage-title": "QQ账号",
 	"qqconnect-special-manage-intro": "管理绑定到您的MediaWiki账号的QQ账号。",

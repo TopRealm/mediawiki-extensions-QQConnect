@@ -41,6 +41,7 @@
 	"qqconnect-error-already-bound": "Error shown when trying to bind an already-bound QQ.",
 	"qqconnect-error-require-bind": "Error shown when RequireBind blocks editing.",
 	"qqconnect-error-disabled": "Error shown when QQ login is disabled.",
+	"qqconnect-error-link-2fa-required": "Error shown during the link-existing-account flow when the user has 2FA enabled (e.g. OATHAuth). Tells them to log in normally first.",
 
 	"qqconnect-choose-title": "Title of the choose-create-or-link page.",
 	"qqconnect-choose-intro": "Intro; $1 is the QQ nickname.",
@@ -52,9 +53,13 @@
 
 	"qqconnect-link-form-title": "Title of the link form.",
 	"qqconnect-link-form-intro": "Intro; $1 is the QQ nickname.",
+	"qqconnect-link-form-2fa-intro": "Intro shown during the 2FA step of the link form (Flow 1). $1 is the QQ nickname.",
 	"qqconnect-link-form-username": "Form label for username.",
 	"qqconnect-link-form-password": "Form label for password.",
 	"qqconnect-link-form-submit": "Submit button text.",
+
+	"qqconnect-verify-bind-title": "Title of the 2FA verification page shown during the authenticated-user bind flow (Flow 2).",
+	"qqconnect-verify-bind-intro": "Intro text on the 2FA verification page (Flow 2).",
 
 	"qqconnect-special-manage-title": "Title of Special:QQConnect.",
 	"qqconnect-special-manage-intro": "Intro of management page.",
