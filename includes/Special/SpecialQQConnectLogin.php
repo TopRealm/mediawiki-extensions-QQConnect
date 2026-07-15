@@ -249,14 +249,29 @@ class SpecialQQConnectLogin extends SpecialPage {
 		$authManager->setAuthenticationSessionData( P::SESSION_KEY_STATE, $state );
 		$authManager->setAuthenticationSessionData( P::SESSION_KEY_REDIRECT, $redirectUri );
 
-		// Force the session to be persisted before the browser is redirected
-		// to QQ. Without this, some session backends may not flush the state
-		// in time for the OAuth callback, causing "invalid state" errors.
-		// @see https://phabricator.wikimedia.org/T147161 (session race with redirect)
+		// Persist the session before redirecting the browser to QQ.
+		//
+		// When the user arrives via the AuthManager login flow (clicking the
+		// "Login with QQ" button on Special:Userlogin), AuthManager has
+		// already called $session->persist() in beginAuthentication(), so the
+		// session cookie is set and the stashed state will survive the QQ
+		// round-trip.
+		//
+		// But when the user arrives directly via ?returnto= (e.g. AjaxLogin
+		// or a personal-menu link), the session may be a non-persistent
+		// in-memory one — especially in a clean browser context like
+		// InPrivate/Incognito mode where no prior cookie exists.  In that
+		// case $session->save() alone writes data to the backend store but
+		// does NOT send a cookie, so the QQ callback creates a brand-new
+		// empty session and the OAuth state is lost ("state validation
+		// failed").
+		//
+		// Calling persist() ensures the session cookie is sent to the browser
+		// regardless of how the flow was entered.  AuthManager itself does
+		// the same in beginAuthentication() (AuthManager.php line 533).
 		$session = $this->getRequest()->getSession();
-		if ( method_exists( $session, 'save' ) ) {
-			$session->save();
-		}
+		$session->persist();
+		$session->save();
 
 		$authorizeUrl = $this->client->getAuthorizeUrl( $redirectUri, $state );
 		$this->logger->info( 'Redirecting user to QQ authorize endpoint', [
