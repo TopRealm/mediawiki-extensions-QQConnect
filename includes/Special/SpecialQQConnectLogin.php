@@ -1,6 +1,6 @@
 <?php
 /**
- * Special:QQConnectLogin — the OAuth callback and flow-control special page.
+ * Special:QQConnectLogin —the OAuth callback and flow-control special page.
  *
  * Responsibilities:
  *  1. In test mode: show a notice page (the button must be visible for QQ
@@ -119,7 +119,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 		// -----------------------------------------------------------------
 		//  Form-submission routing via hidden marker fields.
 		//  HTMLForm's action URL is the bare page title (no query params),
-		//  so we cannot rely on ?action=… for POST requests.  Hidden fields
+		//  so we cannot rely on ?action=—for POST requests.  Hidden fields
 		//  survive the POST and let execute() route correctly.
 		// -----------------------------------------------------------------
 		$qqFlow = $request->getRawVal( '__qqconnect_flow' );
@@ -265,7 +265,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 		//
 		// But when the user arrives directly via ?returnto= (e.g. AjaxLogin
 		// or a personal-menu link), the session may be a non-persistent
-		// in-memory one — especially in a clean browser context like
+		// in-memory one —especially in a clean browser context like
 		// InPrivate/Incognito mode where no prior cookie exists.  In that
 		// case $session->save() alone writes data to the backend store but
 		// does NOT send a cookie, so the QQ callback creates a brand-new
@@ -365,7 +365,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 		$avatar = QQClient::pickAvatar( $userInfo );
 		$appid = $this->config->getAppId();
 
-		// The OAuth round-trip succeeded — the browser has returned from QQ.
+		// The OAuth round-trip succeeded —the browser has returned from QQ.
 		// SESSION_KEY_RETURNTO was set by beginPrimaryAuthentication to
 		// remember the AuthManager continuation URL.  It is no longer
 		// needed and MUST be cleared now; otherwise a subsequent
@@ -460,7 +460,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 		} );
 
 		if ( $secondaryReqs ) {
-			// 2FA is active — stash bind data and redirect to the
+			// 2FA is active —stash bind data and redirect to the
 			// verification page.
 			$authManager->setAuthenticationSessionData( 'QQConnect:pendingBind', [
 				'bindMode' => $bindMode,
@@ -479,7 +479,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 			return;
 		}
 
-		// No secondary provider → bind directly.
+		// No secondary provider —bind directly.
 		$this->executeBind(
 			$bindMode, $user, $unionid, $appid, $nickname, $avatar, $existingBinding
 		);
@@ -597,7 +597,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 				// Fetch the actual AuthenticationRequest objects that
 				// AuthManager expects for this continuation step.  This reads
 				// the stored AUTHN_STATE and returns the exact requests that
-				// continueAuthentication() will accept — no manual field
+				// continueAuthentication() will accept —no manual field
 				// serialization needed.
 				$contReqs = $authManager->getAuthenticationRequests(
 					AuthManager::ACTION_LOGIN_CONTINUE
@@ -658,7 +658,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 	 * This is necessary because AuthenticationRequest::getFieldInfo() returns
 	 * descriptors with type names (e.g. 'string') that are NOT in HTMLForm's
 	 * $typeMappings table, and because HTMLForm prefixes field names with
-	 * 'wp' by default — which would prevent loadFromSubmission() from finding
+	 * 'wp' by default —which would prevent loadFromSubmission() from finding
 	 * the submitted values (it looks for the raw field name, e.g. 'OATHToken',
 	 * not 'wpOATHToken').
 	 *
@@ -767,7 +767,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 				// Use ACTION_LOGIN_CONTINUE to obtain the exact request
 				// objects that AuthManager expects for this continuation
 				// step.  These are the live requests stored in the
-				// AUTHN_STATE session secret — no manual field serialisation
+				// AUTHN_STATE session secret —no manual field serialisation
 				// needed.
 				$reqs = $authManager->getAuthenticationRequests( AuthManager::ACTION_LOGIN_CONTINUE );
 				$loadedReqs = AuthenticationRequest::loadRequestsFromSubmission( $reqs, $data );
@@ -787,7 +787,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 				// so handleLinkForm() will pick them up automatically via
 				// getAuthenticationRequests(ACTION_LOGIN_CONTINUE).
 				// Just ensure the session is flushed before the redirect.
-				$this->getRequest()->getSession()->save();
+				$this->getRequest()->getSession()->persist();
 				return StatusValue::newGood();
 			}
 
@@ -845,7 +845,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 				] );
 				$this->logger->warning( 'QQ link step1 UI: linkAuthState with pending set, saving session' );
 				// Force session persist before HTMLForm redirect.
-				$this->getRequest()->getSession()->save();
+				$this->getRequest()->getSession()->persist();
 				// Return good so HTMLForm redirects to the same page; on the
 				// next render handleLinkForm detects linkAuthState and shows
 				// the 2FA form.
@@ -893,7 +893,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 		$authManager->setAuthenticationSessionData(
 			'QQConnect:linkSuccess', $boundUser->getName()
 		);
-		$this->getRequest()->getSession()->save();
+		$this->getRequest()->getSession()->persist();
 		return StatusValue::newGood();
 	}
 
@@ -947,7 +947,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 	private function resumeLoginFlow() {
 		$authManager = MediaWikiServices::getInstance()->getAuthManager();
 		$returnToUrl = $authManager->getAuthenticationSessionData( P::SESSION_KEY_RETURNTO, '' );
-		// Consume the stashed URL — it must not survive into a later
+		// Consume the stashed URL —it must not survive into a later
 		// startFlow() call (which would re-trigger a QQ redirect).
 		$authManager->removeAuthenticationSessionData( P::SESSION_KEY_RETURNTO );
 		if ( $returnToUrl === '' ) {
@@ -1136,14 +1136,14 @@ class SpecialQQConnectLogin extends SpecialPage {
 			$authManager->setAuthenticationSessionData(
 				'QQConnect:linkSuccess', $user->getName()
 			);
-			$this->getRequest()->getSession()->save();
+			$this->getRequest()->getSession()->persist();
 			return StatusValue::newGood();
 		}
 
 		if ( $response->status === AuthenticationResponse::UI ) {
 			// Still need more input; HTMLForm will re-render with the
 			// (possibly updated) needed requests on the next hit.
-			$this->getRequest()->getSession()->save();
+			$this->getRequest()->getSession()->persist();
 			return StatusValue::newGood();
 		}
 
