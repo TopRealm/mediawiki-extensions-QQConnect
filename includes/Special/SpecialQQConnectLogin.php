@@ -30,6 +30,8 @@ use HTMLForm;
 use MediaWiki\Auth\AuthManager;
 use MediaWiki\Auth\AuthenticationRequest;
 use MediaWiki\Auth\AuthenticationResponse;
+use MediaWiki\Extension\QQConnect\Auth\QQContinueAuthenticationRequest;
+use MediaWiki\Extension\QQConnect\Auth\QQLoginAuthenticationRequest;
 use MediaWiki\Extension\QQConnect\Auth\QQPrimaryAuthenticationProvider as P;
 use MediaWiki\Extension\QQConnect\QQClient;
 use MediaWiki\Extension\QQConnect\QQConnectConfig;
@@ -230,15 +232,49 @@ class SpecialQQConnectLogin extends SpecialPage {
 		$authManager = MediaWikiServices::getInstance()->getAuthManager();
 		$bindMode = $authManager->getAuthenticationSessionData( 'QQConnect:bindMode', null );
 
-		// If there is no AuthManager login state and no bind mode, check for
-		// a ?returnto= URL parameter (used by AjaxLogin). If present, stash
-		// it so we behave as if the flow was started from Special:Userlogin.
+		// If there is no AuthManager login state and no bind mode, we are
+		// entering from outside the AuthManager flow —either via AjaxLogin's
+		// ?returnto= parameter or via a direct personal-menu link.
 		$hasAuthState = $authManager->getAuthenticationSessionData( P::SESSION_KEY_RETURNTO, '' ) !== '';
 		if ( !$hasAuthState && $bindMode === null ) {
 			$returntoUrl = $this->getRequest()->getVal( 'returnto' );
 			if ( $returntoUrl ) {
-				$authManager->setAuthenticationSessionData(
-					P::SESSION_KEY_RETURNTO, $returntoUrl
+				// AjaxLogin path: bootstrap the AuthManager login flow so
+				// that after the OAuth callback, resumeLoginFlow() redirects
+				// to the proper AuthManager continuation URL (which triggers
+				// the actual login, including 2FA via secondary providers).
+
+				$loginReqs = $authManager->getAuthenticationRequests(
+					AuthManager::ACTION_LOGIN
+				);
+
+				// Submit the QQ login button so our primary provider's
+				// beginPrimaryAuthentication() is triggered.  Other providers
+				// (e.g. LocalPassword) will abstain because no
+				// username/password was submitted.
+				$loadedReqs = AuthenticationRequest::loadRequestsFromSubmission(
+					$loginReqs,
+					[ QQLoginAuthenticationRequest::BUTTON_NAME => '1' ]
+				);
+
+				// beginAuthentication() clears auth data, calls
+				// beginPrimaryAuthentication() on each primary provider, and
+				// sets up the AuthManager continuation.  Our provider stores
+				// SESSION_KEY_STATE, SESSION_KEY_REDIRECT, and the proper
+				// AuthManager continuation URL in SESSION_KEY_RETURNTO.
+				// We ignore the returned response (a REDIRECT to this same
+				// page) because we are already on Special:QQConnectLogin and
+				// will proceed with the OAuth redirect below.
+				$response = $authManager->beginAuthentication(
+					$loadedReqs, $returntoUrl
+				);
+
+				$this->logger->info(
+					'QQ startFlow: bootstrapped AuthManager for AjaxLogin path',
+					[
+						'returnto' => $returntoUrl,
+						'authStatus' => $response->status,
+					]
 				);
 			} else {
 				$this->getOutput()->redirect(
@@ -248,12 +284,20 @@ class SpecialQQConnectLogin extends SpecialPage {
 			}
 		}
 
-		$state = $this->client->generateState();
-		$redirectUri = $this->getRedirectUri();
+		// Read state and redirect URI from the session.
+		// For the AuthManager path and AjaxLogin path, beginPrimaryAuthentication()
+		// has already written them.  For the bind-mode path (no AuthManager
+		// involvement), they are not yet set and we generate fresh ones below.
+		$state = $authManager->getAuthenticationSessionData( P::SESSION_KEY_STATE, '' );
+		$redirectUri = $authManager->getAuthenticationSessionData( P::SESSION_KEY_REDIRECT, '' );
 
-		// Stash state for verification on callback.
-		$authManager->setAuthenticationSessionData( P::SESSION_KEY_STATE, $state );
-		$authManager->setAuthenticationSessionData( P::SESSION_KEY_REDIRECT, $redirectUri );
+		if ( $state === '' || $redirectUri === '' ) {
+			// Bind-mode or other non-AuthManager path: generate state now.
+			$state = $this->client->generateState();
+			$redirectUri = $this->getRedirectUri();
+			$authManager->setAuthenticationSessionData( P::SESSION_KEY_STATE, $state );
+			$authManager->setAuthenticationSessionData( P::SESSION_KEY_REDIRECT, $redirectUri );
+		}
 
 		// Persist the session before redirecting the browser to QQ.
 		//
@@ -934,16 +978,21 @@ class SpecialQQConnectLogin extends SpecialPage {
 	/**
 	 * Return into the AuthManager login flow after a bound-user callback.
 	 *
-	 * The primary provider issued a newRedirect to this page during
-	 * beginPrimaryAuthentication, and stored the AuthManager-provided
-	 * returnToUrl (Special:Userlogin/return?authAction=login&wpLoginToken=...)
-	 * in the session. Redirecting back to that exact URL causes the login
-	 * form's handleReturnBeforeExecute to re-POST the stashed data, which
-	 * triggers AuthManager::continueAuthentication, which calls our
-	 * continuePrimaryAuthentication to read the stashed result and newPass.
+	 * Two paths are handled:
 	 *
-	 * This mirrors the PluggableAuth pattern: redirect to the returnToUrl
-	 * verbatim rather than constructing a bare Special:Userlogin URL.
+	 * 1. AuthManager-initiated flow (e.g. from Special:Userlogin):
+	 *    SESSION_KEY_RETURNTO contains the AuthManager continuation URL
+	 *    (Special:Userlogin/return?authAction=login&wpLoginToken=...).
+	 *    We redirect to that URL so that handleReturnBeforeExecute triggers
+	 *    AuthManager::continueAuthentication and the login completes (2FA
+	 *    included).
+	 *
+	 * 2. AjaxLogin / ?returnto= flow:
+	 *    SESSION_KEY_RETURNTO contains a regular wiki page URL.  No
+	 *    AuthManager continuation URL exists, so we call
+	 *    AuthManager::continueAuthentication directly to complete the login
+	 *    (including secondary providers such as OATHAuth).  On success the
+	 *    user is redirected to the stored page URL.
 	 */
 	private function resumeLoginFlow() {
 		$authManager = MediaWikiServices::getInstance()->getAuthManager();
@@ -951,11 +1000,76 @@ class SpecialQQConnectLogin extends SpecialPage {
 		// Consume the stashed URL —it must not survive into a later
 		// startFlow() call (which would re-trigger a QQ redirect).
 		$authManager->removeAuthenticationSessionData( P::SESSION_KEY_RETURNTO );
+
 		if ( $returnToUrl === '' ) {
 			// Session lost; fall back to the login page with an error.
 			$returnToUrl = SpecialPage::getTitleFor( 'Userlogin' )->getFullURL();
 		}
-		$this->getOutput()->redirect( $returnToUrl );
+
+		// Determine whether the stored URL is an AuthManager continuation
+		// URL (e.g. Special:Userlogin/return?authAction=login&...) or a
+		// regular wiki page URL (from AjaxLogin's ?returnto=).
+		$loginReturnBase = SpecialPage::getTitleFor( 'Userlogin' )->getLocalURL( 'return' );
+		$isAuthManagerFlow = ( strpos( $returnToUrl, $loginReturnBase ) === 0 );
+
+		if ( $isAuthManagerFlow ) {
+			// Path 1: AuthManager-initiated flow.
+			// Redirect to the continuation URL; the login form will replay
+			// the stashed request data, AuthManager will call our
+			// continuePrimaryAuthentication, and secondary providers (2FA)
+			// will run as normal.
+			$this->logger->info( 'QQ resumeLoginFlow: AuthManager path, redirecting to {url}', [
+				'url' => $returnToUrl,
+			] );
+			$this->getOutput()->redirect( $returnToUrl );
+			return;
+		}
+
+		// Path 2: AjaxLogin / ?returnto= flow.
+		// AUTHN_STATE was set up by beginAuthentication() in startFlow().
+		// Call continueAuthentication() directly so AuthManager completes
+		// the login (including 2FA) before we redirect to the target page.
+		$this->logger->info( 'QQ resumeLoginFlow: AjaxLogin path, calling continueAuthentication directly' );
+
+		$contReq = new QQContinueAuthenticationRequest();
+		$response = $authManager->continueAuthentication( [ $contReq ] );
+
+		switch ( $response->status ) {
+			case AuthenticationResponse::PASS:
+				// User is now logged in via AuthManager (session user is set).
+				// Secondary providers (OATHAuth etc.) have already been
+				// satisfied by AuthManager internally.
+				$this->logger->info( 'QQ resumeLoginFlow: continueAuthentication PASS for {user}', [
+					'user' => $response->username ?? '(unknown)',
+				] );
+				$this->getOutput()->redirect( $returnToUrl );
+				break;
+
+			case AuthenticationResponse::UI:
+				// A secondary provider (e.g. OATHAuth) requires additional
+				// input.  We cannot handle the 2FA form inline in the
+				// AjaxLogin path, so redirect to Special:Userlogin where
+				// the normal login flow can complete with 2FA.
+				// AUTHN_STATE remains in the session; the login form will
+				// pick it up and prompt for the TOTP code.
+				$this->logger->info( 'QQ resumeLoginFlow: 2FA required, falling back to Special:Userlogin' );
+				$authManager->setAuthenticationSessionData(
+					P::SESSION_KEY_RETURNTO,
+					$returnToUrl
+				);
+				$this->getOutput()->redirect(
+					SpecialPage::getTitleFor( 'Userlogin' )->getFullURL()
+				);
+				break;
+
+			default:
+				// FAIL or other unexpected status.
+				$this->logger->warning( 'QQ resumeLoginFlow: continueAuthentication returned {status}', [
+					'status' => $response->status,
+				] );
+				$this->getOutput()->redirect( $returnToUrl );
+				break;
+		}
 	}
 
 	/**
