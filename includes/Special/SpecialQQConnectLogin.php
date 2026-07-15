@@ -656,6 +656,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 				$authManager->setAuthenticationSessionData( 'QQConnect:linkAuthState', [
 					'neededFields' => $neededFields,
 				] );
+				$this->getRequest()->getSession()->save();
 				return StatusValue::newGood();
 			}
 
@@ -703,6 +704,8 @@ class SpecialQQConnectLogin extends SpecialPage {
 			$authManager->setAuthenticationSessionData( 'QQConnect:linkAuthState', [
 				'neededFields' => $neededFields,
 			] );
+			// Force session persist before HTMLForm redirect.
+			$this->getRequest()->getSession()->save();
 			// Return good so HTMLForm redirects to the same page; on the
 			// next render handleLinkForm detects linkAuthState and shows
 			// the 2FA form.
@@ -747,6 +750,7 @@ class SpecialQQConnectLogin extends SpecialPage {
 		$authManager->setAuthenticationSessionData(
 			'QQConnect:linkSuccess', $boundUser->getName()
 		);
+		$this->getRequest()->getSession()->save();
 		return StatusValue::newGood();
 	}
 
@@ -988,12 +992,14 @@ class SpecialQQConnectLogin extends SpecialPage {
 			$authManager->setAuthenticationSessionData(
 				'QQConnect:linkSuccess', $user->getName()
 			);
+			$this->getRequest()->getSession()->save();
 			return StatusValue::newGood();
 		}
 
 		if ( $response->status === AuthenticationResponse::UI ) {
 			// Still need more input; HTMLForm will re-render with the
 			// (possibly updated) needed requests on the next hit.
+			$this->getRequest()->getSession()->save();
 			return StatusValue::newGood();
 		}
 
